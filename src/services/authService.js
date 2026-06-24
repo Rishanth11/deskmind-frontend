@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // This must match your Spring Boot port!
-const API_URL = 'http://localhost:8080/auth'; 
+const API_URL = 'http://localhost:8080/api/auth'; 
 
 const authService = {
     login: async (email, password) => {

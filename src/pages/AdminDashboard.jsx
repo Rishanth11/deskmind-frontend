@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  ShieldCheckIcon, 
-  UserGroupIcon, 
-  ClockIcon, 
-  ArrowRightOnRectangleIcon,
-  ClipboardDocumentListIcon
+    ShieldCheckIcon, 
+    UserGroupIcon, 
+    ClockIcon, 
+    ArrowRightOnRectangleIcon,
+    ClipboardDocumentListIcon,
+    ChartBarIcon // NEW: Imported the chart icon
 } from '@heroicons/react/24/outline';
 
 const AdminDashboard = () => {
@@ -90,6 +91,14 @@ const AdminDashboard = () => {
                         <button onClick={() => setActiveTab('slas')} className={getTabClass('slas')}>
                             <ClockIcon className="w-5 h-5 mr-3" />
                             SLA Configs
+                        </button>
+                        
+                        {/* NEW: Analytics Dashboard Button */}
+                        <button 
+                            onClick={() => navigate('/admin/analytics')} 
+                            className="w-full flex items-center px-4 py-3 text-slate-300 hover:bg-slate-800 hover:text-white rounded-xl font-medium transition-all border border-transparent">
+                            <ChartBarIcon className="w-5 h-5 mr-3" />
+                            Performance Analytics
                         </button>
                     </nav>
                 </div>

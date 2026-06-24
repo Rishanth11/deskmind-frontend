@@ -6,8 +6,10 @@ const API_URL = 'http://localhost:8080/api/tickets';
 const getToken = () => localStorage.getItem('userToken');
 
 export const getMyTickets = async () => {
-    const token = getToken();
-    const response = await fetch(`${API_URL}/my`, {
+    const token = localStorage.getItem('userToken');
+    
+    // Ensure this URL is exactly /my-tickets (no trailing slashes, spelled correctly)
+    const response = await fetch('http://localhost:8080/api/tickets/my-tickets', {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${token}`,
@@ -15,8 +17,12 @@ export const getMyTickets = async () => {
         }
     });
 
-    if (!response.ok) throw new Error('Failed to fetch tickets');
-    return response.json();
+    if (!response.ok) {
+        if (response.status === 403) throw new Error("403");
+        throw new Error(`Failed to fetch: ${response.status}`);
+    }
+    
+    return await response.json();
 };
 
 export const createTicket = async (ticketData) => {

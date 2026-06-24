@@ -2,35 +2,57 @@ import React, { useState, useEffect } from 'react';
 import { getMyTickets, createTicket } from '../services/ticketService';
 import { useNavigate } from 'react-router-dom';
 import { 
-  TicketIcon, 
-  PlusIcon, 
-  ArrowRightOnRectangleIcon,
-  InboxIcon,
-  XMarkIcon,
-  ClockIcon,
-  CheckCircleIcon,
-  ExclamationTriangleIcon,
-  InformationCircleIcon,
-  WrenchScrewdriverIcon,
-  CurrencyDollarIcon,
-  QuestionMarkCircleIcon,
-  CpuChipIcon,
-  ShieldCheckIcon,
-  GlobeAltIcon
+    TicketIcon, 
+    PlusIcon, 
+    ArrowRightOnRectangleIcon,
+    InboxIcon,
+    XMarkIcon,
+    ClockIcon,
+    CheckCircleIcon,
+    ExclamationTriangleIcon,
+    InformationCircleIcon,
+    WrenchScrewdriverIcon,
+    CurrencyDollarIcon,
+    QuestionMarkCircleIcon,
+    CpuChipIcon,
+    ShieldCheckIcon,
+    GlobeAltIcon
 } from '@heroicons/react/24/outline';
 
 const Dashboard = () => {
+    // Core State
     const [tickets, setTickets] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [showModal, setShowModal] = useState(false);
+    const [showNewTicketModal, setShowNewTicketModal] = useState(false);
     const [formData, setFormData] = useState({ title: '', description: '' });
     const [submitting, setSubmitting] = useState(false);
     
+    // Conversation State
+    const [selectedTicket, setSelectedTicket] = useState(null);
+    const [replies, setReplies] = useState([]);
+    const [replyMessage, setReplyMessage] = useState('');
+    const [loadingReplies, setLoadingReplies] = useState(false);
+    const [actionLoading, setActionLoading] = useState(false);
+
     const navigate = useNavigate();
 
     useEffect(() => {
         loadTickets();
     }, []);
+
+    // Fetch replies when a ticket is opened
+    useEffect(() => {
+        if (selectedTicket) {
+            fetchReplies(selectedTicket.id);
+        } else {
+            setReplies([]);
+            setReplyMessage('');
+        }
+    }, [selectedTicket]);
+
+    // ==========================================
+    // API CALLS
+    // ==========================================
 
     const loadTickets = async () => {
         try {
@@ -53,7 +75,7 @@ const Dashboard = () => {
         try {
             const newTicket = await createTicket(formData);
             setTickets([newTicket, ...tickets]); 
-            setShowModal(false);
+            setShowNewTicketModal(false);
             setFormData({ title: '', description: '' });
         } catch (error) {
             alert("Failed to create ticket. Please try again.");
@@ -62,12 +84,64 @@ const Dashboard = () => {
         }
     };
 
+    const fetchReplies = async (ticketId) => {
+        setLoadingReplies(true);
+        try {
+            const token = localStorage.getItem('userToken');
+            const response = await fetch(`http://localhost:8080/api/tickets/${ticketId}/replies`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setReplies(data);
+            }
+        } catch (err) {
+            console.error("Failed to fetch replies", err);
+        } finally {
+            setLoadingReplies(false);
+        }
+    };
+
+    const handleSendReply = async () => {
+        if (!replyMessage.trim()) return;
+        setActionLoading(true);
+        
+        try {
+            const token = localStorage.getItem('userToken');
+            const response = await fetch(`http://localhost:8080/api/tickets/${selectedTicket.id}/replies`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: replyMessage,
+                    internal: false // Customers can never send internal notes
+                })
+            });
+
+            if (!response.ok) throw new Error("Failed to send reply");
+
+            const newReply = await response.json();
+            setReplies([...replies, newReply]);
+            setReplyMessage(''); 
+            
+        } catch (err) {
+            alert(err.message);
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
     const handleLogout = () => {
         localStorage.removeItem('userToken');
         navigate('/login');
     };
 
-    // Category Icon Mapping
+    // ==========================================
+    // UI HELPERS
+    // ==========================================
+
     const getCategoryIcon = (category) => {
         const icons = {
             'TECHNICAL': <WrenchScrewdriverIcon className="w-3 h-3 mr-1.5" />,
@@ -80,7 +154,6 @@ const Dashboard = () => {
         return icons[category] || <QuestionMarkCircleIcon className="w-3 h-3 mr-1.5" />;
     };
 
-    // Category Color Mapping
     const getCategoryColor = (category) => {
         const colors = {
             'TECHNICAL': 'bg-blue-50 text-blue-700 ring-1 ring-blue-600/20',
@@ -93,7 +166,6 @@ const Dashboard = () => {
         return colors[category] || 'bg-gray-50 text-gray-700 ring-1 ring-gray-600/20';
     };
 
-    // Badge Styling Helpers
     const getPriorityBadge = (priority) => {
         const styles = {
             'P1': 'bg-red-50 text-red-700 ring-1 ring-red-600/20',
@@ -125,7 +197,6 @@ const Dashboard = () => {
         return <ClockIcon className="w-3 h-3 mr-1" />;
     };
 
-    // Ticket statistics
     const totalTickets = tickets.length;
     const openTickets = tickets.filter(t => t.status === 'OPEN').length;
     const resolvedTickets = tickets.filter(t => t.status === 'RESOLVED').length;
@@ -171,7 +242,7 @@ const Dashboard = () => {
                         <p className="text-gray-500 font-medium">Manage and track your helpdesk requests</p>
                     </div>
                     <button 
-                        onClick={() => setShowModal(true)}
+                        onClick={() => setShowNewTicketModal(true)}
                         className="flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-600/30 transition-all hover:-translate-y-0.5 active:scale-95">
                         <PlusIcon className="w-5 h-5 mr-2" />
                         New Ticket
@@ -229,7 +300,7 @@ const Dashboard = () => {
                         <h3 className="text-xl font-bold text-gray-900 mb-2">No tickets found</h3>
                         <p className="text-gray-500">You don't have any open support requests right now.</p>
                         <button 
-                            onClick={() => setShowModal(true)}
+                            onClick={() => setShowNewTicketModal(true)}
                             className="mt-6 inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-600/30 transition-all">
                             <PlusIcon className="w-5 h-5 mr-2" />
                             Create your first ticket
@@ -247,11 +318,12 @@ const Dashboard = () => {
                                         <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Category</th>
                                         <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Priority</th>
                                         <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                                        <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50">
                                     {tickets.map(ticket => (
-                                        <tr key={ticket.id} className="hover:bg-gray-50/50 transition-colors group cursor-pointer">
+                                        <tr key={ticket.id} className="hover:bg-gray-50/50 transition-colors group cursor-pointer" onClick={() => setSelectedTicket(ticket)}>
                                             <td className="px-6 py-4 font-mono text-sm font-semibold text-gray-500">#{ticket.ticketNumber}</td>
                                             <td className="px-6 py-4 text-sm font-medium text-gray-900">{ticket.title}</td>
                                             <td className="px-6 py-4">
@@ -272,6 +344,13 @@ const Dashboard = () => {
                                                     {ticket.status.replace('_', ' ')}
                                                 </span>
                                             </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <button 
+                                                    onClick={(e) => { e.stopPropagation(); setSelectedTicket(ticket); }}
+                                                    className="px-4 py-2 bg-white border border-gray-200 hover:border-blue-600 hover:text-blue-600 text-gray-700 text-sm font-bold rounded-lg transition-colors">
+                                                    View
+                                                </button>
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -282,38 +361,24 @@ const Dashboard = () => {
             </div>
 
             {/* Create Ticket Modal */}
-            {showModal && (
+            {showNewTicketModal && (
                 <>
-                    {/* Backdrop */}
-                    <div 
-                        className="fixed inset-0 z-50 bg-gray-900/50 backdrop-blur-sm transition-opacity"
-                        onClick={() => setShowModal(false)}
-                    />
-                    
-                    {/* Modal */}
+                    <div className="fixed inset-0 z-50 bg-gray-900/50 backdrop-blur-sm transition-opacity" onClick={() => setShowNewTicketModal(false)} />
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                         <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                            {/* Modal Header */}
                             <div className="px-8 pt-8 pb-6 border-b border-gray-100 flex items-start justify-between">
                                 <div>
                                     <h3 className="text-2xl font-bold text-gray-900 mb-1">Create New Ticket</h3>
                                     <p className="text-sm text-gray-500 font-medium">Describe your issue and we'll route it correctly</p>
                                 </div>
-                                <button 
-                                    onClick={() => setShowModal(false)}
-                                    className="p-2 hover:bg-gray-100 rounded-xl transition-colors -mt-2 -mr-2"
-                                >
+                                <button onClick={() => setShowNewTicketModal(false)} className="p-2 hover:bg-gray-100 rounded-xl transition-colors -mt-2 -mr-2">
                                     <XMarkIcon className="w-5 h-5 text-gray-500" />
                                 </button>
                             </div>
-                            
-                            {/* Modal Body */}
                             <div className="p-8">
                                 <form onSubmit={handleCreateTicket} className="space-y-6">
                                     <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-2">
-                                            Problem Title <span className="text-red-500">*</span>
-                                        </label>
+                                        <label className="block text-sm font-bold text-gray-700 mb-2">Problem Title <span className="text-red-500">*</span></label>
                                         <input 
                                             type="text" 
                                             required 
@@ -324,9 +389,7 @@ const Dashboard = () => {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-2">
-                                            Description <span className="text-red-500">*</span>
-                                        </label>
+                                        <label className="block text-sm font-bold text-gray-700 mb-2">Description <span className="text-red-500">*</span></label>
                                         <textarea 
                                             required 
                                             rows="4"
@@ -337,27 +400,11 @@ const Dashboard = () => {
                                         />
                                     </div>
                                     <div className="flex justify-end space-x-3 pt-2">
-                                        <button 
-                                            type="button" 
-                                            onClick={() => setShowModal(false)}
-                                            className="px-6 py-2.5 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors">
+                                        <button type="button" onClick={() => setShowNewTicketModal(false)} className="px-6 py-2.5 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors">
                                             Cancel
                                         </button>
-                                        <button 
-                                            type="submit" 
-                                            disabled={submitting}
-                                            className="flex items-center px-6 py-2.5 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/30 disabled:opacity-70 disabled:cursor-not-allowed transition-all active:scale-95">
-                                            {submitting ? (
-                                                <>
-                                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                    </svg>
-                                                    Creating...
-                                                </>
-                                            ) : (
-                                                'Submit Ticket'
-                                            )}
+                                        <button type="submit" disabled={submitting} className="flex items-center px-6 py-2.5 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/30 disabled:opacity-70 transition-all active:scale-95">
+                                            {submitting ? 'Creating...' : 'Submit Ticket'}
                                         </button>
                                     </div>
                                 </form>
@@ -365,6 +412,87 @@ const Dashboard = () => {
                         </div>
                     </div>
                 </>
+            )}
+
+            {/* View Conversation Modal */}
+            {selectedTicket && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
+                        
+                        {/* Modal Header */}
+                        <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-start bg-gray-50/50">
+                            <div>
+                                <div className="flex items-center space-x-3 mb-2">
+                                    <span className="font-mono text-sm font-bold text-blue-600">{selectedTicket.ticketNumber}</span>
+                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${getStatusBadge(selectedTicket.status)}`}>
+                                        {selectedTicket.status.replace('_', ' ')}
+                                    </span>
+                                </div>
+                                <h3 className="text-2xl font-extrabold text-gray-900">{selectedTicket.title}</h3>
+                            </div>
+                            <button onClick={() => setSelectedTicket(null)} className="text-gray-400 hover:text-gray-600 text-2xl font-bold">×</button>
+                        </div>
+                        
+                        {/* Modal Body */}
+                        <div className="p-8 overflow-y-auto flex-1 bg-white">
+                            
+                            {/* Original Issue */}
+                            <div className="mb-8">
+                                <p className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-2">Your Original Request</p>
+                                <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 text-gray-700 text-sm leading-relaxed">
+                                    {selectedTicket.description}
+                                </div>
+                            </div>
+
+                            <div className="border-t border-gray-100 pt-8">
+                                <p className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Conversation History</p>
+                                
+                                {/* Chat History List */}
+                                <div className="space-y-4 mb-6 pr-2">
+                                    {loadingReplies ? (
+                                        <p className="text-sm text-gray-500 text-center py-4">Loading conversation...</p>
+                                    ) : replies.length === 0 ? (
+                                        <p className="text-sm text-gray-500 text-center py-4 bg-gray-50 rounded-xl">No replies yet. We will review your ticket shortly!</p>
+                                    ) : (
+                                        replies.map(reply => (
+                                            <div key={reply.id} className="p-4 rounded-xl text-sm bg-gray-50 border border-gray-200">
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <span className="font-bold text-gray-900">{reply.senderName}</span>
+                                                    <span className="text-xs text-gray-500 font-medium">
+                                                        {new Date(reply.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                                    </span>
+                                                </div>
+                                                <p className="text-gray-700 whitespace-pre-wrap">{reply.message}</p>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+
+                                {/* Type a New Message Box */}
+                                {selectedTicket.status !== 'CLOSED' && selectedTicket.status !== 'RESOLVED' && (
+                                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                                        <textarea 
+                                            rows="3"
+                                            value={replyMessage}
+                                            onChange={(e) => setReplyMessage(e.target.value)}
+                                            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 focus:outline-none transition-all text-sm font-medium resize-none placeholder:text-gray-400"
+                                            placeholder="Add a reply to this ticket..."
+                                        />
+                                        
+                                        <div className="flex justify-end items-center mt-3">
+                                            <button 
+                                                onClick={handleSendReply}
+                                                disabled={actionLoading || !replyMessage.trim()}
+                                                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-sm transition-all disabled:opacity-70">
+                                                {actionLoading ? 'Sending...' : 'Send Reply'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

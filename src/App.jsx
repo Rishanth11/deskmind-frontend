@@ -3,7 +3,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
-import ForgotPassword from './pages/ForgotPassword'; // 1. Add this import
+import ForgotPassword from './pages/ForgotPassword'; 
+import AgentDashboard from "./pages/AgentDashboard";
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
         <Route path="/" element={<Navigate to="/login" />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/agent/dashboard" element={<AgentDashboard />} />
         
         {/* 2. Add this route */}
         <Route path="/forgot-password" element={<ForgotPassword />} /> 
@@ -24,6 +26,7 @@ function App() {
             </ProtectedRoute>
           } 
         />
+        
       </Routes>
     </BrowserRouter>
   );

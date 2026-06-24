@@ -24,7 +24,6 @@ const Login = () => {
         setError('');
 
         try {
-            // Replace with your actual backend Auth endpoint
             const response = await fetch('http://localhost:8080/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -34,8 +33,17 @@ const Login = () => {
             if (!response.ok) throw new Error('Invalid email or password');
             
             const data = await response.json();
-            localStorage.setItem('userToken', data.token);
-            navigate('/dashboard');
+            
+            // Save the token AND the role to localStorage
+            localStorage.setItem('userToken', data.token); 
+            localStorage.setItem('userRole', data.role); 
+            
+            // The Smart Redirect Logic
+            if (data.role === 'AGENT' || data.role === 'ADMIN') {
+                navigate('/agent/dashboard');
+            } else {
+                navigate('/dashboard'); 
+            }
             
         } catch (err) {
             setError(err.message);

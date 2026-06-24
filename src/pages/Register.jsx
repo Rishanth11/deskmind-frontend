@@ -22,14 +22,32 @@ const Register = () => {
         setLoading(true);
         setError('');
         
-        // Replace with actual registration API call
         try {
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Simulated network request
-            alert("Account created! Please log in.");
+            // Real HTTP request to your Spring Boot backend
+            const response = await fetch('http://localhost:8080/api/auth/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: formData.name,
+                    email: formData.email,
+                    password: formData.password
+                })
+            });
+
+            if (!response.ok) {
+                // If Spring returns 400 (e.g., Email already exists), catch it here
+                const errorText = await response.text();
+                throw new Error(errorText || 'Registration failed');
+            }
+
+            alert("Account created successfully! Please log in.");
             navigate('/login');
+            
         } catch (error) {
-            setError('Failed to create account. Please try again.');
-            console.error(error);
+            setError(error.message || 'Failed to create account. Please try again.');
+            console.error("Registration error:", error);
         } finally {
             setLoading(false);
         }

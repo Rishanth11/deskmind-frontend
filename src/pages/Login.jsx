@@ -39,7 +39,9 @@ const Login = () => {
             localStorage.setItem('userRole', data.role); 
             
             // The Smart Redirect Logic
-            if (data.role === 'AGENT' || data.role === 'ADMIN') {
+            if (data.role === 'ADMIN') {
+                navigate('/admin/dashboard');
+            } else if (data.role === 'AGENT') {
                 navigate('/agent/dashboard');
             } else {
                 navigate('/dashboard'); 

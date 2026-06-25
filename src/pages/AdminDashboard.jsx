@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-    ShieldCheckIcon, 
+    TicketIcon, 
     UserGroupIcon, 
     ClockIcon, 
     ArrowRightOnRectangleIcon,
@@ -73,7 +73,7 @@ const AdminDashboard = () => {
             <div className="w-64 bg-slate-900 text-white flex flex-col justify-between shadow-2xl z-10">
                 <div className="p-6">
                     <div className="flex items-center space-x-3 mb-1">
-                        <ShieldCheckIcon className="w-8 h-8 text-purple-400" />
+                        <TicketIcon className="w-8 h-8 text-purple-400" />
                         <h2 className="text-2xl font-extrabold tracking-tight">DeskMind</h2>
                     </div>
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-8 pl-11">Admin Console</p>

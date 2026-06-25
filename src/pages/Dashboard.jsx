@@ -27,6 +27,9 @@ const Dashboard = () => {
     const [formData, setFormData] = useState({ title: '', description: '' });
     const [submitting, setSubmitting] = useState(false);
     
+    // NEW: Filter State
+    const [activeFilter, setActiveFilter] = useState('ALL'); // 'ALL', 'ACTIVE', or 'RESOLVED'
+    
     // Conversation State
     const [selectedTicket, setSelectedTicket] = useState(null);
     const [replies, setReplies] = useState([]);
@@ -77,6 +80,7 @@ const Dashboard = () => {
             setTickets([newTicket, ...tickets]); 
             setShowNewTicketModal(false);
             setFormData({ title: '', description: '' });
+            setActiveFilter('ALL'); // Reset filter to show the new ticket
         } catch (error) {
             alert("Failed to create ticket. Please try again.");
         } finally {
@@ -139,7 +143,7 @@ const Dashboard = () => {
     };
 
     // ==========================================
-    // UI HELPERS
+    // UI HELPERS & FILTERING
     // ==========================================
 
     const getCategoryIcon = (category) => {
@@ -187,19 +191,28 @@ const Dashboard = () => {
             'RESOLVED': 'bg-blue-50 text-blue-700 ring-1 ring-blue-600/20',
             'CLOSED': 'bg-gray-50 text-gray-700 ring-1 ring-gray-600/20',
             'IN_PROGRESS': 'bg-purple-50 text-purple-700 ring-1 ring-purple-600/20',
+            'WAITING': 'bg-amber-50 text-amber-700 ring-1 ring-amber-600/20',
         };
         return styles[status] || 'bg-slate-50 text-slate-700 ring-1 ring-slate-600/20';
     };
 
     const getStatusIcon = (status) => {
         if (status === 'OPEN') return <CheckCircleIcon className="w-3 h-3 mr-1" />;
-        if (status === 'RESOLVED') return <CheckCircleIcon className="w-3 h-3 mr-1" />;
+        if (status === 'RESOLVED' || status === 'CLOSED') return <CheckCircleIcon className="w-3 h-3 mr-1" />;
         return <ClockIcon className="w-3 h-3 mr-1" />;
     };
 
+    // Calculate metrics for the cards
     const totalTickets = tickets.length;
-    const openTickets = tickets.filter(t => t.status === 'OPEN').length;
-    const resolvedTickets = tickets.filter(t => t.status === 'RESOLVED').length;
+    const activeTickets = tickets.filter(t => ['OPEN', 'IN_PROGRESS', 'WAITING'].includes(t.status)).length;
+    const resolvedTickets = tickets.filter(t => ['RESOLVED', 'CLOSED'].includes(t.status)).length;
+
+    // Apply the active filter to the table data
+    const filteredTickets = tickets.filter(ticket => {
+        if (activeFilter === 'ACTIVE') return ['OPEN', 'IN_PROGRESS', 'WAITING'].includes(ticket.status);
+        if (activeFilter === 'RESOLVED') return ['RESOLVED', 'CLOSED'].includes(ticket.status);
+        return true; // 'ALL'
+    });
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100/50 flex font-sans text-gray-900">
@@ -249,41 +262,55 @@ const Dashboard = () => {
                     </button>
                 </div>
 
-                {/* Stats Cards */}
+                {/* Interactive Filter Stats Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    {/* Total Tickets Card */}
+                    <button 
+                        onClick={() => setActiveFilter('ALL')}
+                        className={`p-6 bg-white rounded-2xl shadow-sm border transition-all text-left focus:outline-none ${activeFilter === 'ALL' ? 'border-blue-500 ring-1 ring-blue-500' : 'border-gray-100 hover:border-blue-300 hover:shadow-md'}`}
+                    >
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-gray-500">Total Tickets</p>
+                                <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Total Tickets</p>
                                 <p className="text-2xl font-bold text-gray-900 mt-1">{totalTickets}</p>
                             </div>
                             <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">
                                 <TicketIcon className="w-6 h-6 text-blue-600" />
                             </div>
                         </div>
-                    </div>
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    </button>
+
+                    {/* Active Tickets Card */}
+                    <button 
+                        onClick={() => setActiveFilter('ACTIVE')}
+                        className={`p-6 bg-white rounded-2xl shadow-sm border transition-all text-left focus:outline-none ${activeFilter === 'ACTIVE' ? 'border-emerald-500 ring-1 ring-emerald-500' : 'border-gray-100 hover:border-emerald-300 hover:shadow-md'}`}
+                    >
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-gray-500">Open</p>
-                                <p className="text-2xl font-bold text-emerald-600 mt-1">{openTickets}</p>
+                                <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Active Issues</p>
+                                <p className="text-2xl font-bold text-emerald-600 mt-1">{activeTickets}</p>
                             </div>
                             <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center">
-                                <CheckCircleIcon className="w-6 h-6 text-emerald-600" />
+                                <ClockIcon className="w-6 h-6 text-emerald-600" />
                             </div>
                         </div>
-                    </div>
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    </button>
+
+                    {/* Resolved Tickets Card */}
+                    <button 
+                        onClick={() => setActiveFilter('RESOLVED')}
+                        className={`p-6 bg-white rounded-2xl shadow-sm border transition-all text-left focus:outline-none ${activeFilter === 'RESOLVED' ? 'border-purple-500 ring-1 ring-purple-500' : 'border-gray-100 hover:border-purple-300 hover:shadow-md'}`}
+                    >
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-gray-500">Resolved</p>
-                                <p className="text-2xl font-bold text-blue-600 mt-1">{resolvedTickets}</p>
+                                <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Resolved</p>
+                                <p className="text-2xl font-bold text-purple-600 mt-1">{resolvedTickets}</p>
                             </div>
-                            <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">
-                                <CheckCircleIcon className="w-6 h-6 text-blue-600" />
+                            <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center">
+                                <CheckCircleIcon className="w-6 h-6 text-purple-600" />
                             </div>
                         </div>
-                    </div>
+                    </button>
                 </div>
 
                 {/* Loading State */}
@@ -292,22 +319,36 @@ const Dashboard = () => {
                         <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div>
                         <p className="mt-4 text-sm font-medium text-gray-500">Loading tickets...</p>
                     </div>
-                ) : tickets.length === 0 ? (
+                ) : filteredTickets.length === 0 ? (
+                    /* Empty State - Dynamically changes based on filter */
                     <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-16 text-center">
                         <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
                             <InboxIcon className="w-10 h-10 text-gray-400" />
                         </div>
                         <h3 className="text-xl font-bold text-gray-900 mb-2">No tickets found</h3>
-                        <p className="text-gray-500">You don't have any open support requests right now.</p>
-                        <button 
-                            onClick={() => setShowNewTicketModal(true)}
-                            className="mt-6 inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-600/30 transition-all">
-                            <PlusIcon className="w-5 h-5 mr-2" />
-                            Create your first ticket
-                        </button>
+                        <p className="text-gray-500 mb-6">
+                            {tickets.length === 0 
+                                ? "You don't have any open support requests right now." 
+                                : `No tickets match the "${activeFilter.toLowerCase()}" filter.`}
+                        </p>
+                        
+                        {tickets.length === 0 ? (
+                            <button 
+                                onClick={() => setShowNewTicketModal(true)}
+                                className="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-600/30 transition-all">
+                                <PlusIcon className="w-5 h-5 mr-2" />
+                                Create your first ticket
+                            </button>
+                        ) : (
+                            <button 
+                                onClick={() => setActiveFilter('ALL')}
+                                className="inline-flex items-center px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-all">
+                                View All Tickets
+                            </button>
+                        )}
                     </div>
                 ) : (
-                    /* Tickets Table */
+                    /* Tickets Table - Now maps over filteredTickets */
                     <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">
@@ -322,7 +363,7 @@ const Dashboard = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50">
-                                    {tickets.map(ticket => (
+                                    {filteredTickets.map(ticket => (
                                         <tr key={ticket.id} className="hover:bg-gray-50/50 transition-colors group cursor-pointer" onClick={() => setSelectedTicket(ticket)}>
                                             <td className="px-6 py-4 font-mono text-sm font-semibold text-gray-500">#{ticket.ticketNumber}</td>
                                             <td className="px-6 py-4 text-sm font-medium text-gray-900">{ticket.title}</td>

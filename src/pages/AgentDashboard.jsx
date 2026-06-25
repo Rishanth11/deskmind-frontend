@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  TicketIcon, 
-  UserGroupIcon, 
-  ChartBarIcon, 
-  ArrowRightOnRectangleIcon,
-  SparklesIcon,
-  ArrowPathIcon
+    TicketIcon, 
+    UserGroupIcon, 
+    ChartBarIcon, 
+    ArrowRightOnRectangleIcon,
+    SparklesIcon,
+    ArrowPathIcon
 } from '@heroicons/react/24/outline';
 
 const AgentDashboard = () => {
@@ -26,23 +26,49 @@ const AgentDashboard = () => {
     const [replyMessage, setReplyMessage] = useState('');
     const [isInternal, setIsInternal] = useState(false);
     const [loadingReplies, setLoadingReplies] = useState(false);
+    
+    // 3. Track the status selected in the dropdown
+    const [transitionStatus, setTransitionStatus] = useState('');
+
+    // 4. Agent Presence State
+    const [isOnline, setIsOnline] = useState(true);
 
     useEffect(() => {
-        fetchTickets(true); // true means show the main loading spinner
+        fetchTickets(true); 
     }, []);
 
     useEffect(() => {
         if (selectedTicket) {
             fetchReplies(selectedTicket.id);
+            setTransitionStatus(selectedTicket.status); // Initialize dropdown to current status
         } else {
             setReplies([]); 
             setReplyMessage('');
+            setTransitionStatus('');
         }
     }, [selectedTicket]);
 
     // ==========================================
     // API CALLS
     // ==========================================
+
+    const handleToggleStatus = async () => {
+        const newStatus = !isOnline;
+        setIsOnline(newStatus); // Optimistic UI update for immediate feedback
+        
+        try {
+            const token = localStorage.getItem('userToken');
+            const response = await fetch(`http://localhost:8080/api/users/availability?available=${newStatus}`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (!response.ok) throw new Error("Failed to update server");
+        } catch (err) {
+            setIsOnline(!newStatus); // Revert switch if the server fails
+            alert("Network error: Could not update availability.");
+        }
+    };
 
     const fetchTickets = async (showSpinner = true) => {
         if (showSpinner) setLoading(true);
@@ -76,7 +102,7 @@ const AgentDashboard = () => {
 
     const handleRefresh = async () => {
         setIsRefreshing(true);
-        await fetchTickets(false); // Fetch in background without flashing the screen
+        await fetchTickets(false); 
         setIsRefreshing(false);
     };
 
@@ -124,34 +150,64 @@ const AgentDashboard = () => {
     };
 
     const handleSendReply = async () => {
-        if (!replyMessage.trim()) return;
+        // Validation: If status is RESOLVED, we MUST have a message
+        if (transitionStatus === 'RESOLVED' && !replyMessage.trim()) {
+            alert("A resolution note is required to mark a ticket as Resolved.");
+            return;
+        }
+
+        // Standard check: stop if nothing to send and no status change
+        if (!replyMessage.trim() && transitionStatus === selectedTicket.status) return;
+        
         setActionLoading(true);
         
         try {
             const token = localStorage.getItem('userToken');
-            const response = await fetch(`http://localhost:8080/api/tickets/${selectedTicket.id}/replies`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    message: replyMessage,
-                    internal: isInternal
-                })
-            });
-
-            if (!response.ok) throw new Error("Failed to send reply");
-
-            const newReply = await response.json();
             
-            setReplies([...replies, newReply]);
-            setReplyMessage(''); 
+            // 1. Post the reply message if typed
+            if (replyMessage.trim()) {
+                const replyResponse = await fetch(`http://localhost:8080/api/tickets/${selectedTicket.id}/replies`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: replyMessage,
+                        internal: isInternal
+                    })
+                });
+
+                if (!replyResponse.ok) throw new Error("Failed to send reply");
+                const newReply = await replyResponse.json();
+                
+                setReplies([...replies, newReply]);
+                setReplyMessage(''); 
+            }
             
-            if (selectedTicket.status === 'OPEN' && !isInternal) {
-                const updatedTicket = { ...selectedTicket, status: 'IN_PROGRESS' };
-                setSelectedTicket(updatedTicket);
-                setTickets(tickets.map(t => t.id === updatedTicket.id ? updatedTicket : t));
+            // 2. Handle Status Transition Logic
+            let finalStatus = transitionStatus;
+            
+            // Auto-transition to IN_PROGRESS if a public reply is sent on an OPEN ticket
+            if (selectedTicket.status === 'OPEN' && !isInternal && transitionStatus === 'OPEN' && replyMessage.trim()) {
+                finalStatus = 'IN_PROGRESS';
+            }
+
+            // 3. Fire the PUT request ONLY if the status actually changed
+            if (finalStatus !== selectedTicket.status) {
+                const statusRes = await fetch(`http://localhost:8080/api/tickets/${selectedTicket.id}/status?status=${finalStatus}`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (statusRes.ok) {
+                    const updatedTicket = await statusRes.json();
+                    setSelectedTicket(updatedTicket);
+                    setTickets(tickets.map(t => t.id === updatedTicket.id ? updatedTicket : t));
+                    setTransitionStatus(updatedTicket.status);
+                } else {
+                    throw new Error("Failed to update status");
+                }
             }
 
         } catch (err) {
@@ -160,7 +216,7 @@ const AgentDashboard = () => {
             setActionLoading(false);
         }
     };
-
+    
     const handleLogout = () => {
         localStorage.removeItem('userToken');
         navigate('/login');
@@ -179,6 +235,7 @@ const AgentDashboard = () => {
     const getStatusBadge = (status) => {
         if (status === 'OPEN') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
         if (status === 'IN_PROGRESS') return 'bg-blue-50 text-blue-700 border-blue-200';
+        if (status === 'WAITING') return 'bg-amber-50 text-amber-700 border-amber-200';
         if (status === 'RESOLVED') return 'bg-purple-50 text-purple-700 border-purple-200';
         return 'bg-slate-50 text-slate-700 border-slate-200';
     };
@@ -189,12 +246,11 @@ const AgentDashboard = () => {
             : "w-full flex items-center px-4 py-3 text-slate-300 hover:bg-slate-800 hover:text-white rounded-xl font-medium transition-all border border-transparent";
     };
 
-    // Filter tickets based on the active sidebar tab
     const displayedTickets = tickets.filter(ticket => {
         if (activeTab === 'assigned') {
             return ticket.agentName !== 'Unassigned'; 
         }
-        return true; // 'queue' shows everything
+        return true; 
     });
 
     return (
@@ -207,7 +263,22 @@ const AgentDashboard = () => {
                         <TicketIcon className="w-8 h-8 text-indigo-400" />
                         <h2 className="text-2xl font-extrabold tracking-tight">DeskMind</h2>
                     </div>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-8 pl-11">Agent Workspace</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 pl-11">Agent Workspace</p>
+                    
+                    {/* Agent Presence Toggle */}
+                    <div className="mb-8 pl-11 flex items-center justify-between pr-6">
+                        <span className={`text-sm font-bold ${isOnline ? 'text-emerald-400' : 'text-slate-500'}`}>
+                            {isOnline ? '🟢 Online' : '⚪ Offline'}
+                        </span>
+                        
+                        <button 
+                            onClick={handleToggleStatus}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-900 ${isOnline ? 'bg-emerald-500' : 'bg-slate-700'}`}
+                        >
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isOnline ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                    </div>
+
                     <div className="w-full h-px bg-slate-800 mb-8"></div>
                     
                     <nav className="space-y-2">
@@ -264,10 +335,55 @@ const AgentDashboard = () => {
 
                 {/* Main View Logic */}
                 {activeTab === 'analytics' ? (
-                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-16 text-center flex flex-col items-center justify-center min-h-[400px]">
-                        <ChartBarIcon className="w-16 h-16 text-indigo-200 mb-4" />
-                        <h2 className="text-2xl font-extrabold text-slate-900 mb-2">Analytics Dashboard</h2>
-                        <p className="text-slate-500 max-w-md">Ticket volume, resolution times, and agent performance metrics are being calculated and will appear here soon.</p>
+                    <div className="space-y-6">
+                        {/* Calculate Agent Stats dynamically from their assigned tickets */}
+                        {(() => {
+                            const myTickets = tickets.filter(t => t.agentName !== 'Unassigned');
+                            const resolvedCount = myTickets.filter(t => t.status === 'RESOLVED').length;
+                            const activeCount = myTickets.filter(t => t.status === 'IN_PROGRESS' || t.status === 'WAITING').length;
+                            const slaBreaches = myTickets.filter(t => t.slaBreached && t.status !== 'RESOLVED').length;
+
+                            return (
+                                <>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
+                                            <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
+                                                <TicketIcon className="w-6 h-6" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-bold text-slate-500 uppercase">My Active Tickets</p>
+                                                <p className="text-3xl font-extrabold text-slate-900">{activeCount}</p>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
+                                            <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center">
+                                                <SparklesIcon className="w-6 h-6" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-bold text-slate-500 uppercase">Total Resolved</p>
+                                                <p className="text-3xl font-extrabold text-slate-900">{resolvedCount}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-red-100 flex items-center space-x-4">
+                                            <div className="w-12 h-12 bg-red-50 text-red-600 rounded-xl flex items-center justify-center">
+                                                <ChartBarIcon className="w-6 h-6" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-bold text-red-500 uppercase">My SLA Breaches</p>
+                                                <p className="text-3xl font-extrabold text-red-600">{slaBreaches}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-slate-900 rounded-2xl shadow-sm border border-slate-800 p-8 text-center text-white mt-8">
+                                        <h3 className="text-xl font-bold mb-2">Keep up the great work!</h3>
+                                        <p className="text-slate-400 text-sm">Your performance metrics are calculated based on your currently assigned queue history.</p>
+                                    </div>
+                                </>
+                            );
+                        })()}
                     </div>
                 ) : (
                     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
@@ -434,7 +550,7 @@ const AgentDashboard = () => {
                                         )}
                                     </div>
 
-                                    {/* Type a New Message Box */}
+                                    {/* Action Bar Layout */}
                                     <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
                                         <textarea 
                                             rows="4"
@@ -444,8 +560,9 @@ const AgentDashboard = () => {
                                             placeholder={isInternal ? "Type a private note for other agents..." : "Type your reply to the customer here..."}
                                         />
                                         
-                                        <div className="flex justify-between items-center mt-3">
-                                            <label className="flex items-center cursor-pointer">
+                                        <div className="flex flex-col space-y-3 mt-3">
+                                            {/* Internal Note Toggle */}
+                                            <label className="flex items-center cursor-pointer self-start">
                                                 <input 
                                                     type="checkbox" 
                                                     checked={isInternal}
@@ -455,12 +572,28 @@ const AgentDashboard = () => {
                                                 <span className="ml-2 text-sm font-bold text-slate-600 select-none">Internal Note Only</span>
                                             </label>
                                             
-                                            <button 
-                                                onClick={handleSendReply}
-                                                disabled={actionLoading || !replyMessage.trim()}
-                                                className={`px-6 py-2.5 text-white font-bold rounded-xl shadow-sm transition-all disabled:opacity-70 ${isInternal ? 'bg-amber-600 hover:bg-amber-700' : 'bg-slate-900 hover:bg-slate-800'}`}>
-                                                {actionLoading ? 'Sending...' : (isInternal ? 'Save Note' : 'Send Reply')}
-                                            </button>
+                                            {/* Action Bar: Status Dropdown & Submit */}
+                                            <div className="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-200 shadow-sm">
+                                                <div className="flex items-center space-x-2">
+                                                    <label className="text-xs font-bold text-slate-500 uppercase">Set Status To:</label>
+                                                    <select 
+                                                        value={transitionStatus} 
+                                                        onChange={(e) => setTransitionStatus(e.target.value)}
+                                                        className="bg-white border border-slate-200 rounded-lg p-1.5 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
+                                                    >
+                                                        <option value="OPEN" disabled>Open</option>
+                                                        <option value="IN_PROGRESS">In Progress</option>
+                                                        <option value="WAITING">Waiting on Customer</option>
+                                                        <option value="RESOLVED">Resolved</option>
+                                                    </select>
+                                                </div>
+                                                <button 
+                                                    onClick={handleSendReply}
+                                                    disabled={actionLoading || (!replyMessage.trim() && transitionStatus === selectedTicket.status)}
+                                                    className={`px-5 py-2 text-white text-sm font-bold rounded-xl shadow-sm transition-all disabled:opacity-70 ${isInternal ? 'bg-amber-600 hover:bg-amber-700' : 'bg-indigo-600 hover:bg-indigo-700'}`}>
+                                                    {actionLoading ? 'Sending...' : (isInternal ? 'Save Note' : 'Submit Update')}
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

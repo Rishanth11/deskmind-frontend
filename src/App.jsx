@@ -7,6 +7,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import AgentDashboard from "./pages/AgentDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import AnalyticsDashboard from "./pages/AnalyticsDashboard";
+import ManagerDashboard from "./pages/ManagerDashboard";
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
         <Route path="/agent/dashboard" element={<AgentDashboard />} />
         <Route path="/admin/dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
         <Route path="/admin/analytics" element={<ProtectedRoute><AnalyticsDashboard /></ProtectedRoute>} />
+        <Route path="/manager/dashboard" element={<ProtectedRoute><ManagerDashboard /></ProtectedRoute>} />
         
         {/* 2. Add this route */}
         <Route path="/forgot-password" element={<ForgotPassword />} /> 

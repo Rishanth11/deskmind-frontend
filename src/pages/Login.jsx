@@ -41,6 +41,8 @@ const Login = () => {
             // The Smart Redirect Logic
             if (data.role === 'ADMIN') {
                 navigate('/admin/dashboard');
+            } else if (data.role === 'MANAGER') {
+                navigate('/manager/dashboard');
             } else if (data.role === 'AGENT') {
                 navigate('/agent/dashboard');
             } else {

@@ -166,6 +166,10 @@ const AdminDashboard = () => {
             : "w-full flex items-center px-4 py-3 text-slate-300 hover:bg-slate-800 hover:text-white rounded-xl font-medium transition-all border border-transparent";
     };
 
+    // 🚨 SMART FILTER: Calculate which agents are already assigned so we hide them
+    const assignedAgentIds = activeTab === 'teams' ? data.flatMap(team => team.agents?.map(a => a.id) || []) : [];
+    const unassignedAgents = availableAgents.filter(agent => !assignedAgentIds.includes(agent.id));
+
     return (
         <div className="min-h-screen bg-slate-50 flex font-sans text-slate-900">
             
@@ -298,8 +302,19 @@ const AdminDashboard = () => {
                                                         {item.handlesCategory}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4 text-sm text-slate-600">
-                                                    {item.agents ? item.agents.length : 0} assigned
+                                                <td className="px-6 py-4">
+                                                    {/* 🚨 THE VISIBILITY FIX: Show agent names as badges */}
+                                                    {item.agents && item.agents.length > 0 ? (
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {item.agents.map(agent => (
+                                                                <span key={agent.id} className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                                                                    {agent.name}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-sm font-medium text-slate-400 italic">No agents assigned</span>
+                                                    )}
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
                                                     <button 
@@ -341,8 +356,9 @@ const AdminDashboard = () => {
                             <input name="email" type="email" onChange={handleInputChange} placeholder="Email Address" required className="w-full p-2 border rounded-lg bg-slate-50" />
                             <input name="password" type="password" onChange={handleInputChange} placeholder="Temporary Password" required className="w-full p-2 border rounded-lg bg-slate-50" />
                             <select name="role" onChange={handleInputChange} className="w-full p-2 border rounded-lg font-medium bg-slate-50">
-                                <option value="AGENT">Support Agent</option>
-                                <option value="MANAGER">Team Manager</option>
+                                <option value="AGENT">Support Agent (Team Member)</option>
+                                {/* 🚨 CLARITY FIX: Renamed option to avoid confusion */}
+                                <option value="MANAGER">Global Supervisor (Manager)</option>
                             </select>
                             <div className="flex justify-end space-x-2 pt-4">
                                 <button type="button" onClick={() => setShowStaffModal(false)} className="px-4 py-2 text-slate-500 hover:text-slate-700 font-medium">Cancel</button>
@@ -370,14 +386,13 @@ const AdminDashboard = () => {
                 </div>
             )}
 
-            {/* NEW: Updated Assign Agent Modal */}
+            {/* Assign Agent Modal */}
             {showAssignModal && (
                 <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50">
                     <div className="bg-white p-8 rounded-2xl shadow-xl w-96">
                         <h2 className="text-xl font-bold mb-4">Assign Agent to Team</h2>
                         <form onSubmit={handleAssignAgent} className="space-y-4">
                             
-                            {/* Swapped text input for dynamic dropdown */}
                             <select 
                                 name="agentId" 
                                 onChange={handleInputChange} 
@@ -385,17 +400,21 @@ const AdminDashboard = () => {
                                 required 
                                 className="w-full p-2 border rounded-lg bg-slate-50 text-slate-700"
                             >
-                                <option value="" disabled>Select an Agent...</option>
-                                {availableAgents.map(agent => (
+                                <option value="" disabled>Select an available Agent...</option>
+                                {/* 🚨 LOGIC FIX: Maps over unassignedAgents instead of availableAgents */}
+                                {unassignedAgents.map(agent => (
                                     <option key={agent.id} value={agent.id}>
                                         {agent.name} ({agent.email})
                                     </option>
                                 ))}
+                                {unassignedAgents.length === 0 && (
+                                    <option value="" disabled>No available agents to assign.</option>
+                                )}
                             </select>
 
                             <div className="flex justify-end space-x-2 pt-4">
                                 <button type="button" onClick={() => setShowAssignModal(false)} className="px-4 py-2 text-slate-500 hover:text-slate-700 font-medium">Cancel</button>
-                                <button type="submit" className="px-4 py-2 bg-purple-600 text-white rounded-lg font-bold hover:bg-purple-700">Assign</button>
+                                <button type="submit" disabled={unassignedAgents.length === 0} className="px-4 py-2 bg-purple-600 text-white rounded-lg font-bold hover:bg-purple-700 disabled:opacity-50">Assign</button>
                             </div>
                         </form>
                     </div>

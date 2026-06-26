@@ -24,7 +24,8 @@ const Login = () => {
         setError('');
 
         try {
-            const response = await fetch('http://localhost:8080/api/auth/login', {
+            // FIXED: Pointing directly to your live Render backend
+            const response = await fetch('https://deskmind-3kq3.onrender.com/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })

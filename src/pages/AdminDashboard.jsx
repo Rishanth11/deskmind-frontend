@@ -24,6 +24,9 @@ const AdminDashboard = () => {
     const [showAssignModal, setShowAssignModal] = useState(false);
     const [selectedTeamId, setSelectedTeamId] = useState(null);
 
+    // --- NEW: Agent Dropdown State ---
+    const [availableAgents, setAvailableAgents] = useState([]);
+
     // --- Form States ---
     const [formData, setFormData] = useState({
         name: '', email: '', password: '', role: 'AGENT',
@@ -34,6 +37,10 @@ const AdminDashboard = () => {
 
     useEffect(() => {
         fetchAdminData();
+        // Fetch the agents list automatically when looking at the teams tab
+        if (activeTab === 'teams') {
+            fetchAgentsList();
+        }
     }, [activeTab]);
 
     const fetchAdminData = async () => {
@@ -48,7 +55,6 @@ const AdminDashboard = () => {
             if (activeTab === 'teams') endpoint = '/api/admin/teams';
             if (activeTab === 'slas') endpoint = '/api/admin/slas';
 
-            // FIXED: Pointing to live Render URL
             const response = await fetch(`${API_BASE}${endpoint}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -67,6 +73,22 @@ const AdminDashboard = () => {
             setError(err.message);
         } finally {
             setLoading(false);
+        }
+    };
+
+    // --- NEW: Fetch Agents for the Dropdown ---
+    const fetchAgentsList = async () => {
+        try {
+            const token = localStorage.getItem('userToken');
+            const response = await fetch(`${API_BASE}/api/admin/agents`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setAvailableAgents(data);
+            }
+        } catch (err) {
+            console.error("Failed to load agents", err);
         }
     };
 
@@ -90,6 +112,8 @@ const AdminDashboard = () => {
             setShowStaffModal(false);
             setFormData({ ...formData, name: '', email: '', password: '' });
             alert(`${formData.role} created successfully!`);
+            // Refresh agents list so the new staff appears in the dropdown immediately
+            if (activeTab === 'teams') fetchAgentsList();
         } catch (err) {
             alert(err.message);
         }
@@ -346,13 +370,29 @@ const AdminDashboard = () => {
                 </div>
             )}
 
-            {/* Assign Agent Modal */}
+            {/* NEW: Updated Assign Agent Modal */}
             {showAssignModal && (
                 <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50">
                     <div className="bg-white p-8 rounded-2xl shadow-xl w-96">
                         <h2 className="text-xl font-bold mb-4">Assign Agent to Team</h2>
                         <form onSubmit={handleAssignAgent} className="space-y-4">
-                            <input name="agentId" onChange={handleInputChange} placeholder="Agent User ID (e.g. 5)" required className="w-full p-2 border rounded-lg bg-slate-50" />
+                            
+                            {/* Swapped text input for dynamic dropdown */}
+                            <select 
+                                name="agentId" 
+                                onChange={handleInputChange} 
+                                value={formData.agentId}
+                                required 
+                                className="w-full p-2 border rounded-lg bg-slate-50 text-slate-700"
+                            >
+                                <option value="" disabled>Select an Agent...</option>
+                                {availableAgents.map(agent => (
+                                    <option key={agent.id} value={agent.id}>
+                                        {agent.name} ({agent.email})
+                                    </option>
+                                ))}
+                            </select>
+
                             <div className="flex justify-end space-x-2 pt-4">
                                 <button type="button" onClick={() => setShowAssignModal(false)} className="px-4 py-2 text-slate-500 hover:text-slate-700 font-medium">Cancel</button>
                                 <button type="submit" className="px-4 py-2 bg-purple-600 text-white rounded-lg font-bold hover:bg-purple-700">Assign</button>

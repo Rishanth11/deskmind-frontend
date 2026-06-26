@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// This must match your Spring Boot port!
-const API_URL = 'https://deskmind-3kq3.onrender.com'; 
+// FIXED: Added /api/auth to the end to match your Spring Boot controllers!
+const API_URL = 'https://deskmind-3kq3.onrender.com/api/auth'; 
 
 const authService = {
     login: async (email, password) => {
@@ -38,8 +38,6 @@ const authService = {
     logout: () => {
         localStorage.removeItem('userToken');
     },
-
-    // ... existing functions (login, register, logout) ...
 
     forgotPassword: async (email) => {
         try {

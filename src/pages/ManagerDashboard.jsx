@@ -16,6 +16,9 @@ const ManagerDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
+    // FIXED: Added the production API URL
+    const API_BASE = 'https://deskmind-3kq3.onrender.com';
+
     useEffect(() => {
         fetchSupervisorData();
     }, []);
@@ -31,10 +34,10 @@ const ManagerDashboard = () => {
                 'Content-Type': 'application/json'
             };
 
-            // Fetch both Analytics and Tickets simultaneously
+            // FIXED: Replaced localhost with dynamic API_BASE
             const [analyticsRes, ticketsRes] = await Promise.all([
-                fetch('http://localhost:8080/api/analytics/dashboard', { headers }),
-                fetch('http://localhost:8080/api/tickets/all', { headers })
+                fetch(`${API_BASE}/api/analytics/dashboard`, { headers }),
+                fetch(`${API_BASE}/api/tickets/all`, { headers })
             ]);
 
             if (!analyticsRes.ok || !ticketsRes.ok) {

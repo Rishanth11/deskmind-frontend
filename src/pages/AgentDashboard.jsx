@@ -33,6 +33,9 @@ const AgentDashboard = () => {
     // 4. Agent Presence State
     const [isOnline, setIsOnline] = useState(true);
 
+    // FIXED: Centralized API URL so you never have to hunt for localhost again!
+    const API_BASE = 'https://deskmind-3kq3.onrender.com';
+
     useEffect(() => {
         fetchTickets(true); 
     }, []);
@@ -58,7 +61,8 @@ const AgentDashboard = () => {
         
         try {
             const token = localStorage.getItem('userToken');
-            const response = await fetch(`http://localhost:8080/api/users/availability?available=${newStatus}`, {
+            // FIXED: Updated URL
+            const response = await fetch(`${API_BASE}/api/users/availability?available=${newStatus}`, {
                 method: 'PUT',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -76,7 +80,8 @@ const AgentDashboard = () => {
             const token = localStorage.getItem('userToken');
             if (!token) throw new Error("No authentication token found.");
 
-            const response = await fetch('http://localhost:8080/api/tickets/all', {
+            // FIXED: Updated URL
+            const response = await fetch(`${API_BASE}/api/tickets/all`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
@@ -110,7 +115,8 @@ const AgentDashboard = () => {
         setActionLoading(true);
         try {
             const token = localStorage.getItem('userToken');
-            const response = await fetch(`http://localhost:8080/api/tickets/${id}/assign`, {
+            // FIXED: Updated URL
+            const response = await fetch(`${API_BASE}/api/tickets/${id}/assign`, {
                 method: 'PUT',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -135,7 +141,8 @@ const AgentDashboard = () => {
         setLoadingReplies(true);
         try {
             const token = localStorage.getItem('userToken');
-            const response = await fetch(`http://localhost:8080/api/tickets/${ticketId}/replies`, {
+            // FIXED: Updated URL
+            const response = await fetch(`${API_BASE}/api/tickets/${ticketId}/replies`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (response.ok) {
@@ -166,7 +173,8 @@ const AgentDashboard = () => {
             
             // 1. Post the reply message if typed
             if (replyMessage.trim()) {
-                const replyResponse = await fetch(`http://localhost:8080/api/tickets/${selectedTicket.id}/replies`, {
+                // FIXED: Updated URL
+                const replyResponse = await fetch(`${API_BASE}/api/tickets/${selectedTicket.id}/replies`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -195,7 +203,8 @@ const AgentDashboard = () => {
 
             // 3. Fire the PUT request ONLY if the status actually changed
             if (finalStatus !== selectedTicket.status) {
-                const statusRes = await fetch(`http://localhost:8080/api/tickets/${selectedTicket.id}/status?status=${finalStatus}`, {
+                // FIXED: Updated URL
+                const statusRes = await fetch(`${API_BASE}/api/tickets/${selectedTicket.id}/status?status=${finalStatus}`, {
                     method: 'PUT',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });

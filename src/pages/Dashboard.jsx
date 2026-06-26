@@ -39,6 +39,9 @@ const Dashboard = () => {
 
     const navigate = useNavigate();
 
+    // FIXED: Added the production API URL for the direct fetch calls below
+    const API_BASE = 'https://deskmind-3kq3.onrender.com';
+
     useEffect(() => {
         loadTickets();
     }, []);
@@ -92,7 +95,8 @@ const Dashboard = () => {
         setLoadingReplies(true);
         try {
             const token = localStorage.getItem('userToken');
-            const response = await fetch(`http://localhost:8080/api/tickets/${ticketId}/replies`, {
+            // FIXED: Replaced localhost with dynamic API_BASE
+            const response = await fetch(`${API_BASE}/api/tickets/${ticketId}/replies`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (response.ok) {
@@ -112,7 +116,8 @@ const Dashboard = () => {
         
         try {
             const token = localStorage.getItem('userToken');
-            const response = await fetch(`http://localhost:8080/api/tickets/${selectedTicket.id}/replies`, {
+            // FIXED: Replaced localhost with dynamic API_BASE
+            const response = await fetch(`${API_BASE}/api/tickets/${selectedTicket.id}/replies`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,

@@ -17,14 +17,17 @@ const Register = () => {
     const [error, setError] = useState('');
     const navigate = useNavigate();
 
+    // FIXED: Centralized API URL for production
+    const API_BASE = 'https://deskmind-3kq3.onrender.com';
+
     const handleRegister = async (e) => {
         e.preventDefault();
         setLoading(true);
         setError('');
         
         try {
-            // Real HTTP request to your Spring Boot backend
-            const response = await fetch('http://localhost:8080/api/auth/register', {
+            // FIXED: Using API_BASE instead of localhost
+            const response = await fetch(`${API_BASE}/api/auth/register`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -37,7 +40,6 @@ const Register = () => {
             });
 
             if (!response.ok) {
-                // If Spring returns 400 (e.g., Email already exists), catch it here
                 const errorText = await response.text();
                 throw new Error(errorText || 'Registration failed');
             }

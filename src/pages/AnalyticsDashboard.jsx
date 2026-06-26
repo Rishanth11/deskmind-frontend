@@ -9,6 +9,9 @@ const AnalyticsDashboard = () => {
 
     const COLORS = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b'];
 
+    // FIXED: Added the production API URL
+    const API_BASE = 'https://deskmind-3kq3.onrender.com';
+
     useEffect(() => {
         fetchMetrics();
     }, []);
@@ -16,7 +19,8 @@ const AnalyticsDashboard = () => {
     const fetchMetrics = async () => {
         try {
             const token = localStorage.getItem('userToken');
-            const response = await fetch('http://localhost:8080/api/analytics/dashboard', {
+            // FIXED: Replaced localhost with dynamic API_BASE
+            const response = await fetch(`${API_BASE}/api/analytics/dashboard`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
@@ -33,7 +37,8 @@ const AnalyticsDashboard = () => {
     const handleExportCSV = async () => {
         try {
             const token = localStorage.getItem('userToken');
-            const response = await fetch('http://localhost:8080/api/analytics/export/csv', {
+            // FIXED: Replaced localhost with dynamic API_BASE
+            const response = await fetch(`${API_BASE}/api/analytics/export/csv`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             

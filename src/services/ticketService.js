@@ -1,15 +1,11 @@
-// src/services/ticketService.js
+const API_BASE = 'https://deskmind-3kq3.onrender.com';
+const API_URL = `${API_BASE}/api/tickets`;
 
-const API_URL = 'http://localhost:8080/api/tickets';
-
-// Helper to get the JWT from local storage
 const getToken = () => localStorage.getItem('userToken');
 
 export const getMyTickets = async () => {
-    const token = localStorage.getItem('userToken');
-    
-    // Ensure this URL is exactly /my-tickets (no trailing slashes, spelled correctly)
-    const response = await fetch('http://localhost:8080/api/tickets/my-tickets', {
+    const token = getToken();
+    const response = await fetch(`${API_URL}/my-tickets`, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${token}`,

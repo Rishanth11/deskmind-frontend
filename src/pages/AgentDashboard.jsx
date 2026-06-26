@@ -81,7 +81,7 @@ const AgentDashboard = () => {
             if (!token) throw new Error("No authentication token found.");
 
             // FIXED: Updated URL
-            const response = await fetch(`${API_BASE}/api/tickets/all`, {
+            const response = await fetch(`${API_BASE}/api/tickets/agent`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'

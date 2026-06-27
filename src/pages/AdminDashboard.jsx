@@ -8,12 +8,17 @@ import {
     ClipboardDocumentListIcon,
     ChartBarIcon,
     PlusIcon,
-    UserPlusIcon
+    UserPlusIcon,
+    UserIcon,
+    TrashIcon,
+    NoSymbolIcon,
+    CheckCircleIcon,
+    XMarkIcon
 } from '@heroicons/react/24/outline';
 
 const AdminDashboard = () => {
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState('audit'); 
+    const [activeTab, setActiveTab] = useState('audit'); // 'audit', 'teams', 'slas', 'staff'
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -24,7 +29,7 @@ const AdminDashboard = () => {
     const [showAssignModal, setShowAssignModal] = useState(false);
     const [selectedTeamId, setSelectedTeamId] = useState(null);
 
-    // --- NEW: Agent Dropdown State ---
+    // --- Agent Dropdown State ---
     const [availableAgents, setAvailableAgents] = useState([]);
 
     // --- Form States ---
@@ -37,8 +42,7 @@ const AdminDashboard = () => {
 
     useEffect(() => {
         fetchAdminData();
-        // Fetch the agents list automatically when looking at the teams tab
-        if (activeTab === 'teams') {
+        if (activeTab === 'teams' || activeTab === 'staff') {
             fetchAgentsList();
         }
     }, [activeTab]);
@@ -54,6 +58,7 @@ const AdminDashboard = () => {
             if (activeTab === 'audit') endpoint = '/api/admin/audit-logs';
             if (activeTab === 'teams') endpoint = '/api/admin/teams';
             if (activeTab === 'slas') endpoint = '/api/admin/slas';
+            if (activeTab === 'staff') endpoint = '/api/admin/staff/all'; // NEW: Staff endpoint
 
             const response = await fetch(`${API_BASE}${endpoint}`, {
                 headers: {
@@ -76,7 +81,6 @@ const AdminDashboard = () => {
         }
     };
 
-    // --- NEW: Fetch Agents for the Dropdown ---
     const fetchAgentsList = async () => {
         try {
             const token = localStorage.getItem('userToken');
@@ -96,7 +100,10 @@ const AdminDashboard = () => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    // --- API POST Functions ---
+    // ==========================================
+    // API ACTIONS
+    // ==========================================
+
     const handleCreateStaff = async (e) => {
         e.preventDefault();
         try {
@@ -112,11 +119,39 @@ const AdminDashboard = () => {
             setShowStaffModal(false);
             setFormData({ ...formData, name: '', email: '', password: '' });
             alert(`${formData.role} created successfully!`);
-            // Refresh agents list so the new staff appears in the dropdown immediately
-            if (activeTab === 'teams') fetchAgentsList();
+            fetchAdminData();
+            fetchAgentsList();
         } catch (err) {
             alert(err.message);
         }
+    };
+
+    // NEW: Toggle Block/Unblock Staff
+    const handleToggleStaffStatus = async (staffId) => {
+        try {
+            const token = localStorage.getItem('userToken');
+            const response = await fetch(`${API_BASE}/api/admin/staff/${staffId}/toggle-status`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) throw new Error("Failed to update status");
+            fetchAdminData();
+        } catch (err) { alert(err.message); }
+    };
+
+    // NEW: Delete Staff
+    const handleDeleteStaff = async (staffId) => {
+        if (!window.confirm("Are you sure you want to permanently delete this user? This cannot be undone.")) return;
+        try {
+            const token = localStorage.getItem('userToken');
+            const response = await fetch(`${API_BASE}/api/admin/staff/${staffId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) throw new Error("Failed to delete staff");
+            fetchAdminData();
+            fetchAgentsList();
+        } catch (err) { alert(err.message); }
     };
 
     const handleCreateTeam = async (e) => {
@@ -132,9 +167,7 @@ const AdminDashboard = () => {
             setShowTeamModal(false);
             setFormData({ ...formData, teamName: '', handlesCategory: '' });
             fetchAdminData();
-        } catch (err) {
-            alert(err.message);
-        }
+        } catch (err) { alert(err.message); }
     };
 
     const handleAssignAgent = async (e) => {
@@ -149,9 +182,22 @@ const AdminDashboard = () => {
             setShowAssignModal(false);
             setFormData({ ...formData, agentId: '' });
             fetchAdminData();
-        } catch (err) {
-            alert(err.message);
-        }
+        } catch (err) { alert(err.message); }
+    };
+
+    // NEW: Remove Agent from Team (Reassignment)
+    const handleRemoveAgentFromTeam = async (teamId, agentId) => {
+        if(!window.confirm("Remove this agent from the team? They will be unassigned.")) return;
+        try {
+            const token = localStorage.getItem('userToken');
+            const response = await fetch(`${API_BASE}/api/admin/teams/${teamId}/agents/${agentId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) throw new Error("Failed to remove agent");
+            fetchAdminData();
+            fetchAgentsList();
+        } catch (err) { alert(err.message); }
     };
 
     const handleLogout = () => {
@@ -166,7 +212,7 @@ const AdminDashboard = () => {
             : "w-full flex items-center px-4 py-3 text-slate-300 hover:bg-slate-800 hover:text-white rounded-xl font-medium transition-all border border-transparent";
     };
 
-    // 🚨 SMART FILTER: Calculate which agents are already assigned so we hide them
+    // SMART FILTER: Calculate unassigned agents
     const assignedAgentIds = activeTab === 'teams' ? data.flatMap(team => team.agents?.map(a => a.id) || []) : [];
     const unassignedAgents = availableAgents.filter(agent => !assignedAgentIds.includes(agent.id));
 
@@ -189,6 +235,10 @@ const AdminDashboard = () => {
                         </button>
                         <button onClick={() => setActiveTab('teams')} className={getTabClass('teams')}>
                             <UserGroupIcon className="w-5 h-5 mr-3" /> Support Teams
+                        </button>
+                        {/* NEW TAB ADDED HERE */}
+                        <button onClick={() => setActiveTab('staff')} className={getTabClass('staff')}>
+                            <UserIcon className="w-5 h-5 mr-3" /> Staff Directory
                         </button>
                         <button onClick={() => setActiveTab('slas')} className={getTabClass('slas')}>
                             <ClockIcon className="w-5 h-5 mr-3" /> SLA Configs
@@ -214,26 +264,30 @@ const AdminDashboard = () => {
                         <h1 className="text-3xl font-extrabold text-slate-900 mb-1">
                             {activeTab === 'audit' && 'System Audit Ledger'}
                             {activeTab === 'teams' && 'Team Routing Configuration'}
+                            {activeTab === 'staff' && 'Global Staff Directory'}
                             {activeTab === 'slas' && 'Service Level Agreements (SLAs)'}
                         </h1>
                         <p className="text-slate-500 font-medium">
                             {activeTab === 'audit' && 'Immutable record of system actions and routing events.'}
                             {activeTab === 'teams' && 'Manage AI categories and team assignments.'}
+                            {activeTab === 'staff' && 'Manage Agents, Supervisors, and system access.'}
                             {activeTab === 'slas' && 'Configure priority-based response deadlines.'}
                         </p>
                     </div>
 
                     {/* Action Buttons */}
-                    {activeTab === 'teams' && (
-                        <div className="flex space-x-3">
+                    <div className="flex space-x-3">
+                        {activeTab === 'staff' && (
                             <button onClick={() => setShowStaffModal(true)} className="flex items-center px-4 py-2 bg-indigo-100 text-indigo-700 font-bold rounded-lg hover:bg-indigo-200 transition">
                                 <UserPlusIcon className="w-5 h-5 mr-2" /> Add Staff
                             </button>
+                        )}
+                        {activeTab === 'teams' && (
                             <button onClick={() => setShowTeamModal(true)} className="flex items-center px-4 py-2 bg-purple-600 text-white font-bold rounded-lg hover:bg-purple-700 transition">
                                 <PlusIcon className="w-5 h-5 mr-2" /> Create Team
                             </button>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
 
                 {error && <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl font-medium text-sm">{error}</div>}
@@ -261,11 +315,18 @@ const AdminDashboard = () => {
                                     )}
                                     {activeTab === 'teams' && (
                                         <>
-                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Team ID</th>
                                             <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Team Name</th>
                                             <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">AI Route</th>
                                             <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Agents</th>
                                             <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase text-right">Actions</th>
+                                        </>
+                                    )}
+                                    {activeTab === 'staff' && (
+                                        <>
+                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">User Name</th>
+                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Role</th>
+                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Status</th>
+                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase text-right">Manage</th>
                                         </>
                                     )}
                                     {activeTab === 'slas' && (
@@ -281,34 +342,30 @@ const AdminDashboard = () => {
                                     <tr key={item.id || index} className="hover:bg-slate-50/50 transition-colors">
                                         {activeTab === 'audit' && (
                                             <>
-                                                <td className="px-6 py-4 text-sm font-medium text-slate-500 whitespace-nowrap">
-                                                    {new Date(item.timestamp).toLocaleString()}
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">
-                                                        {item.action}
-                                                    </span>
-                                                </td>
+                                                <td className="px-6 py-4 text-sm font-medium text-slate-500 whitespace-nowrap">{new Date(item.timestamp).toLocaleString()}</td>
+                                                <td className="px-6 py-4"><span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">{item.action}</span></td>
                                                 <td className="px-6 py-4 text-sm font-medium text-slate-900">{item.performedBy}</td>
                                                 <td className="px-6 py-4 text-sm text-slate-600">{item.details}</td>
                                             </>
                                         )}
                                         {activeTab === 'teams' && (
                                             <>
-                                                <td className="px-6 py-4 text-sm font-bold text-slate-500">#{item.id}</td>
                                                 <td className="px-6 py-4 text-sm font-bold text-slate-900">{item.name}</td>
+                                                <td className="px-6 py-4"><span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">{item.handlesCategory}</span></td>
                                                 <td className="px-6 py-4">
-                                                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                                                        {item.handlesCategory}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    {/* 🚨 THE VISIBILITY FIX: Show agent names as badges */}
                                                     {item.agents && item.agents.length > 0 ? (
                                                         <div className="flex flex-wrap gap-2">
                                                             {item.agents.map(agent => (
-                                                                <span key={agent.id} className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                                                                // NEW: Agent Badge with Remove 'X' Button
+                                                                <span key={agent.id} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200 group">
                                                                     {agent.name}
+                                                                    <button 
+                                                                        onClick={() => handleRemoveAgentFromTeam(item.id, agent.id)}
+                                                                        className="ml-1.5 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                        title="Remove from team"
+                                                                    >
+                                                                        <XMarkIcon className="w-3.5 h-3.5" />
+                                                                    </button>
                                                                 </span>
                                                             ))}
                                                         </div>
@@ -326,13 +383,45 @@ const AdminDashboard = () => {
                                                 </td>
                                             </>
                                         )}
-                                        {activeTab === 'slas' && (
+                                        {activeTab === 'staff' && (
                                             <>
                                                 <td className="px-6 py-4">
-                                                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-slate-900 text-white">
-                                                        {item.priority}
+                                                    <div className="text-sm font-bold text-slate-900">{item.name}</div>
+                                                    <div className="text-xs font-medium text-slate-500">{item.email}</div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold border ${item.role === 'MANAGER' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
+                                                        {item.role === 'MANAGER' ? 'Global Supervisor' : 'Support Agent'}
                                                     </span>
                                                 </td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${item.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                                                        {item.isActive ? 'Active' : 'Blocked'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <div className="flex justify-end space-x-2">
+                                                        <button 
+                                                            onClick={() => handleToggleStaffStatus(item.id)}
+                                                            className={`p-1.5 rounded-lg border transition-colors ${item.isActive ? 'text-slate-400 border-slate-200 hover:text-amber-600 hover:bg-amber-50 hover:border-amber-200' : 'text-emerald-600 border-emerald-200 bg-emerald-50 hover:bg-emerald-100'}`}
+                                                            title={item.isActive ? "Block User" : "Unblock User"}
+                                                        >
+                                                            {item.isActive ? <NoSymbolIcon className="w-5 h-5" /> : <CheckCircleIcon className="w-5 h-5" />}
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => handleDeleteStaff(item.id)}
+                                                            className="p-1.5 text-slate-400 border border-slate-200 rounded-lg hover:text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors"
+                                                            title="Delete User"
+                                                        >
+                                                            <TrashIcon className="w-5 h-5" />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </>
+                                        )}
+                                        {activeTab === 'slas' && (
+                                            <>
+                                                <td className="px-6 py-4"><span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-slate-900 text-white">{item.priority}</span></td>
                                                 <td className="px-6 py-4 text-sm font-bold text-slate-900">{item.deadlineHours} Hours</td>
                                             </>
                                         )}
@@ -357,7 +446,6 @@ const AdminDashboard = () => {
                             <input name="password" type="password" onChange={handleInputChange} placeholder="Temporary Password" required className="w-full p-2 border rounded-lg bg-slate-50" />
                             <select name="role" onChange={handleInputChange} className="w-full p-2 border rounded-lg font-medium bg-slate-50">
                                 <option value="AGENT">Support Agent (Team Member)</option>
-                                {/* 🚨 CLARITY FIX: Renamed option to avoid confusion */}
                                 <option value="MANAGER">Global Supervisor (Manager)</option>
                             </select>
                             <div className="flex justify-end space-x-2 pt-4">
@@ -392,7 +480,6 @@ const AdminDashboard = () => {
                     <div className="bg-white p-8 rounded-2xl shadow-xl w-96">
                         <h2 className="text-xl font-bold mb-4">Assign Agent to Team</h2>
                         <form onSubmit={handleAssignAgent} className="space-y-4">
-                            
                             <select 
                                 name="agentId" 
                                 onChange={handleInputChange} 
@@ -401,7 +488,6 @@ const AdminDashboard = () => {
                                 className="w-full p-2 border rounded-lg bg-slate-50 text-slate-700"
                             >
                                 <option value="" disabled>Select an available Agent...</option>
-                                {/* 🚨 LOGIC FIX: Maps over unassignedAgents instead of availableAgents */}
                                 {unassignedAgents.map(agent => (
                                     <option key={agent.id} value={agent.id}>
                                         {agent.name} ({agent.email})

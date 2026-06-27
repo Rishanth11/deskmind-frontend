@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-    BriefcaseIcon, 
     TicketIcon, 
     ExclamationTriangleIcon,
     ArrowRightOnRectangleIcon,
     UserGroupIcon,
-    ChartBarIcon
+    ChartBarIcon,
+    ArrowsRightLeftIcon,
+    XMarkIcon
 } from '@heroicons/react/24/outline';
 
 const ManagerDashboard = () => {
@@ -16,11 +17,18 @@ const ManagerDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
-    // FIXED: Added the production API URL
+    // Escalation state
+    const [showEscalateModal, setShowEscalateModal] = useState(false);
+    const [selectedTicket, setSelectedTicket] = useState(null);
+    const [agents, setAgents] = useState([]);
+    const [selectedAgentId, setSelectedAgentId] = useState('');
+    const [escalating, setEscalating] = useState(false);
+
     const API_BASE = 'https://deskmind-3kq3.onrender.com';
 
     useEffect(() => {
         fetchSupervisorData();
+        fetchAgents();
     }, []);
 
     const fetchSupervisorData = async () => {
@@ -34,7 +42,6 @@ const ManagerDashboard = () => {
                 'Content-Type': 'application/json'
             };
 
-            // FIXED: Replaced localhost with dynamic API_BASE
             const [analyticsRes, ticketsRes] = await Promise.all([
                 fetch(`${API_BASE}/api/analytics/dashboard`, { headers }),
                 fetch(`${API_BASE}/api/tickets/all`, { headers })
@@ -57,6 +64,50 @@ const ManagerDashboard = () => {
         }
     };
 
+    const fetchAgents = async () => {
+        try {
+            const token = localStorage.getItem('userToken');
+            const response = await fetch(`${API_BASE}/api/admin/agents`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+                setAgents(await response.json());
+            }
+        } catch (err) {
+            console.error("Failed to load agents", err);
+        }
+    };
+
+    const handleOpenEscalate = (ticket) => {
+        setSelectedTicket(ticket);
+        setSelectedAgentId('');
+        setShowEscalateModal(true);
+    };
+
+    const handleEscalate = async (e) => {
+        e.preventDefault();
+        if (!selectedAgentId) return;
+        setEscalating(true);
+        try {
+            const token = localStorage.getItem('userToken');
+            const response = await fetch(
+                `${API_BASE}/api/tickets/${selectedTicket.id}/escalate?agentId=${selectedAgentId}`,
+                {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }
+            );
+            if (!response.ok) throw new Error("Failed to escalate ticket");
+            setShowEscalateModal(false);
+            setSelectedTicket(null);
+            fetchSupervisorData();
+        } catch (err) {
+            alert(err.message);
+        } finally {
+            setEscalating(false);
+        }
+    };
+
     const handleLogout = () => {
         localStorage.removeItem('userToken');
         localStorage.removeItem('userRole');
@@ -70,10 +121,12 @@ const ManagerDashboard = () => {
         return 'bg-slate-50 text-slate-700 border-slate-200';
     };
 
+    const inputClass = "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600 outline-none transition-all text-sm font-medium text-slate-900";
+
     return (
         <div className="min-h-screen bg-slate-50 flex font-sans text-slate-900">
             
-            {/* Sidebar - Teal Theme */}
+            {/* Sidebar */}
             <div className="w-64 bg-slate-900 text-white flex flex-col justify-between shadow-2xl z-10">
                 <div className="p-6">
                     <div className="flex items-center space-x-3 mb-1">
@@ -102,7 +155,7 @@ const ManagerDashboard = () => {
                 </div>
             </div>
 
-            {/* Main Content Area */}
+            {/* Main Content */}
             <div className="flex-1 px-8 py-10 overflow-y-auto">
                 <div className="flex justify-between items-end mb-8">
                     <div>
@@ -153,7 +206,7 @@ const ManagerDashboard = () => {
                             </div>
                         </div>
 
-                        {/* Unified Table: Queue Oversight */}
+                        {/* Global Ticket Queue */}
                         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                             <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50">
                                 <h3 className="text-lg font-bold text-slate-900">Global Ticket Queue</h3>
@@ -166,6 +219,7 @@ const ManagerDashboard = () => {
                                         <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Category</th>
                                         <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Assigned Agent</th>
                                         <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Status</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase text-right">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
@@ -184,10 +238,21 @@ const ManagerDashboard = () => {
                                                     {ticket.status}
                                                 </span>
                                             </td>
+                                            <td className="px-6 py-4 text-right">
+                                                {ticket.status !== 'RESOLVED' && ticket.status !== 'CLOSED' && (
+                                                    <button
+                                                        onClick={() => handleOpenEscalate(ticket)}
+                                                        className="inline-flex items-center px-3 py-1.5 text-xs font-bold text-orange-600 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors"
+                                                    >
+                                                        <ArrowsRightLeftIcon className="w-3.5 h-3.5 mr-1" />
+                                                        Escalate
+                                                    </button>
+                                                )}
+                                            </td>
                                         </tr>
                                     ))}
                                     {tickets.length === 0 && (
-                                        <tr><td colSpan="5" className="px-6 py-12 text-center text-slate-500">No active tickets in the system.</td></tr>
+                                        <tr><td colSpan="6" className="px-6 py-12 text-center text-slate-500">No active tickets in the system.</td></tr>
                                     )}
                                 </tbody>
                             </table>
@@ -195,6 +260,51 @@ const ManagerDashboard = () => {
                     </>
                 )}
             </div>
+
+            {/* Escalate Modal */}
+            {showEscalateModal && selectedTicket && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50">
+                    <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
+                        <div className="flex justify-between items-center mb-2">
+                            <h2 className="text-xl font-extrabold text-slate-900">Escalate Ticket</h2>
+                            <button onClick={() => setShowEscalateModal(false)} className="text-slate-400 hover:text-slate-600">
+                                <XMarkIcon className="w-6 h-6" />
+                            </button>
+                        </div>
+                        <p className="text-sm text-slate-500 mb-6">
+                            Reassigning <span className="font-bold text-slate-700">{selectedTicket.ticketNumber}</span> — currently assigned to <span className="font-bold text-orange-600">{selectedTicket.agentName}</span>
+                        </p>
+                        <form onSubmit={handleEscalate} className="space-y-5">
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1.5">Select New Agent</label>
+                                <select
+                                    required
+                                    value={selectedAgentId}
+                                    onChange={(e) => setSelectedAgentId(e.target.value)}
+                                    className={inputClass}
+                                >
+                                    <option value="" disabled>Choose an agent...</option>
+                                    {agents
+                                        .filter(a => a.id !== selectedTicket.agentId)
+                                        .map(agent => (
+                                            <option key={agent.id} value={agent.id}>
+                                                {agent.name} ({agent.email})
+                                            </option>
+                                        ))
+                                    }
+                                </select>
+                            </div>
+                            <button
+                                type="submit"
+                                disabled={escalating || !selectedAgentId}
+                                className="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl transition-colors disabled:opacity-50"
+                            >
+                                {escalating ? 'Escalating...' : 'Confirm Escalation'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

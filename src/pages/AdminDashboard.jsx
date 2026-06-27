@@ -14,7 +14,8 @@ import {
     NoSymbolIcon,
     CheckCircleIcon,
     XMarkIcon,
-    ArrowsRightLeftIcon 
+    ArrowsRightLeftIcon,
+    Bars3Icon // NEW: Added for mobile sidebar toggle
 } from '@heroicons/react/24/outline';
 
 const AdminDashboard = () => {
@@ -29,6 +30,7 @@ const AdminDashboard = () => {
     const [showAssignModal, setShowAssignModal] = useState(false);
     const [showMoveModal, setShowMoveModal] = useState(false);
     const [selectedTeamId, setSelectedTeamId] = useState(null);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false); // NEW: Sidebar state for mobile
 
     const [availableAgents, setAvailableAgents] = useState([]);
     const [moveData, setMoveData] = useState({ agentId: '', oldTeamId: '', newTeamId: '', agentName: '' });
@@ -45,6 +47,8 @@ const AdminDashboard = () => {
         if (activeTab === 'teams' || activeTab === 'staff') {
             fetchAgentsList();
         }
+        // Close sidebar on mobile when tab changes
+        setIsSidebarOpen(false);
     }, [activeTab]);
 
     const fetchAdminData = async () => {
@@ -100,6 +104,7 @@ const AdminDashboard = () => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
+    // --- API Handlers --- (Unchanged logic)
     const handleCreateStaff = async (e) => {
         e.preventDefault();
         try {
@@ -107,9 +112,7 @@ const AdminDashboard = () => {
             const response = await fetch(`${API_BASE}/api/admin/staff`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: formData.name, email: formData.email, password: formData.password, role: formData.role
-                })
+                body: JSON.stringify({ name: formData.name, email: formData.email, password: formData.password, role: formData.role })
             });
             if (!response.ok) throw new Error("Failed to create staff");
             setShowStaffModal(false);
@@ -117,17 +120,14 @@ const AdminDashboard = () => {
             alert(`${formData.role} created successfully!`);
             fetchAdminData();
             fetchAgentsList();
-        } catch (err) {
-            alert(err.message);
-        }
+        } catch (err) { alert(err.message); }
     };
 
     const handleToggleStaffStatus = async (staffId) => {
         try {
             const token = localStorage.getItem('userToken');
             const response = await fetch(`${API_BASE}/api/admin/staff/${staffId}/toggle-status`, {
-                method: 'PUT',
-                headers: { 'Authorization': `Bearer ${token}` }
+                method: 'PUT', headers: { 'Authorization': `Bearer ${token}` }
             });
             if (!response.ok) throw new Error("Failed to update status");
             fetchAdminData();
@@ -139,8 +139,7 @@ const AdminDashboard = () => {
         try {
             const token = localStorage.getItem('userToken');
             const response = await fetch(`${API_BASE}/api/admin/staff/${staffId}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
+                method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }
             });
             if (!response.ok) throw new Error("Failed to delete staff");
             fetchAdminData();
@@ -169,8 +168,7 @@ const AdminDashboard = () => {
         try {
             const token = localStorage.getItem('userToken');
             const response = await fetch(`${API_BASE}/api/admin/teams/${selectedTeamId}/agents/${formData.agentId}`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
+                method: 'POST', headers: { 'Authorization': `Bearer ${token}` }
             });
             if (!response.ok) throw new Error("Failed to assign agent");
             setShowAssignModal(false);
@@ -184,8 +182,7 @@ const AdminDashboard = () => {
         try {
             const token = localStorage.getItem('userToken');
             const response = await fetch(`${API_BASE}/api/admin/teams/${teamId}/agents/${agentId}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
+                method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }
             });
             if (!response.ok) throw new Error("Failed to remove agent");
             fetchAdminData();
@@ -198,8 +195,7 @@ const AdminDashboard = () => {
         try {
             const token = localStorage.getItem('userToken');
             const response = await fetch(`${API_BASE}/api/admin/teams/${moveData.oldTeamId}/agents/${moveData.agentId}/move/${moveData.newTeamId}`, {
-                method: 'PUT',
-                headers: { 'Authorization': `Bearer ${token}` }
+                method: 'PUT', headers: { 'Authorization': `Bearer ${token}` }
             });
             if (!response.ok) throw new Error("Failed to move agent");
             setShowMoveModal(false);
@@ -227,17 +223,36 @@ const AdminDashboard = () => {
     const labelClass = "block text-sm font-bold text-slate-700 mb-1.5";
 
     return (
-        <div className="min-h-screen bg-slate-50 flex font-sans text-slate-900">
+        <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row font-sans text-slate-900 relative">
+            
+            {/* Mobile Top Header */}
+            <div className="md:hidden bg-slate-900 text-white p-4 flex justify-between items-center shadow-md sticky top-0 z-20">
+                <div className="flex items-center space-x-2">
+                    <TicketIcon className="w-6 h-6 text-purple-400" />
+                    <h2 className="text-xl font-extrabold tracking-tight">DeskMind</h2>
+                </div>
+                <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 -mr-2 text-slate-300 hover:text-white transition-colors">
+                    {isSidebarOpen ? <XMarkIcon className="w-6 h-6" /> : <Bars3Icon className="w-6 h-6" />}
+                </button>
+            </div>
+
+            {/* Mobile Sidebar Overlay */}
+            {isSidebarOpen && (
+                <div 
+                    className="fixed inset-0 bg-slate-900/60 z-30 md:hidden backdrop-blur-sm"
+                    onClick={() => setIsSidebarOpen(false)}
+                />
+            )}
             
             {/* Sidebar */}
-            <div className="w-64 bg-slate-900 text-white flex flex-col justify-between shadow-2xl z-10">
+            <div className={`fixed inset-y-0 left-0 w-64 bg-slate-900 text-white flex flex-col justify-between shadow-2xl z-40 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                 <div className="p-6">
-                    <div className="flex items-center space-x-3 mb-1">
+                    <div className="hidden md:flex items-center space-x-3 mb-1">
                         <TicketIcon className="w-8 h-8 text-purple-400" />
                         <h2 className="text-2xl font-extrabold tracking-tight">DeskMind</h2>
                     </div>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-8 pl-11">Admin Console</p>
-                    <div className="w-full h-px bg-slate-800 mb-8"></div>
+                    <p className="hidden md:block text-xs font-bold text-slate-400 uppercase tracking-widest mb-8 pl-11">Admin Console</p>
+                    <div className="hidden md:block w-full h-px bg-slate-800 mb-8"></div>
                     
                     <nav className="space-y-2">
                         <button onClick={() => setActiveTab('audit')} className={getTabClass('audit')}>
@@ -265,17 +280,18 @@ const AdminDashboard = () => {
             </div>
 
             {/* Main Content */}
-            <div className="flex-1 px-8 py-10 overflow-y-auto relative">
+            <div className="flex-1 w-full max-w-full px-4 py-6 sm:px-8 sm:py-10 overflow-y-auto relative">
                 
-                <div className="mb-8 flex justify-between items-end">
+                {/* Header Section */}
+                <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
                     <div>
-                        <h1 className="text-3xl font-extrabold text-slate-900 mb-1">
+                        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mb-1">
                             {activeTab === 'audit' && 'System Audit Ledger'}
                             {activeTab === 'teams' && 'Team Routing Configuration'}
                             {activeTab === 'staff' && 'Global Staff Directory'}
                             {activeTab === 'slas' && 'Service Level Agreements (SLAs)'}
                         </h1>
-                        <p className="text-slate-500 font-medium">
+                        <p className="text-sm sm:text-base text-slate-500 font-medium">
                             {activeTab === 'audit' && 'Immutable record of system actions and routing events.'}
                             {activeTab === 'teams' && 'Manage AI categories and team assignments.'}
                             {activeTab === 'staff' && 'Manage Agents, Supervisors, and system access.'}
@@ -283,14 +299,14 @@ const AdminDashboard = () => {
                         </p>
                     </div>
 
-                    <div className="flex space-x-3">
+                    <div className="flex flex-col sm:flex-row w-full sm:w-auto space-y-2 sm:space-y-0 sm:space-x-3">
                         {activeTab === 'staff' && (
-                            <button onClick={() => setShowStaffModal(true)} className="flex items-center px-4 py-2 bg-indigo-100 text-indigo-700 font-bold rounded-lg hover:bg-indigo-200 transition">
+                            <button onClick={() => setShowStaffModal(true)} className="w-full sm:w-auto flex items-center justify-center px-4 py-2 bg-indigo-100 text-indigo-700 font-bold rounded-lg hover:bg-indigo-200 transition">
                                 <UserPlusIcon className="w-5 h-5 mr-2" /> Add Staff
                             </button>
                         )}
                         {activeTab === 'teams' && (
-                            <button onClick={() => setShowTeamModal(true)} className="flex items-center px-4 py-2 bg-purple-600 text-white font-bold rounded-lg hover:bg-purple-700 transition">
+                            <button onClick={() => setShowTeamModal(true)} className="w-full sm:w-auto flex items-center justify-center px-4 py-2 bg-purple-600 text-white font-bold rounded-lg hover:bg-purple-700 transition">
                                 <PlusIcon className="w-5 h-5 mr-2" /> Create Team
                             </button>
                         )}
@@ -309,160 +325,165 @@ const AdminDashboard = () => {
                             <h3 className="text-xl font-bold text-slate-900 mb-2">No records found</h3>
                         </div>
                     ) : (
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-slate-50 border-b border-slate-200">
-                                    {activeTab === 'audit' && (
-                                        <>
-                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Timestamp</th>
-                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Action</th>
-                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Performed By</th>
-                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Details</th>
-                                        </>
-                                    )}
-                                    {activeTab === 'teams' && (
-                                        <>
-                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Team ID</th>
-                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Team Name</th>
-                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">AI Route</th>
-                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Agents</th>
-                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase text-right">Actions</th>
-                                        </>
-                                    )}
-                                    {activeTab === 'staff' && (
-                                        <>
-                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">User Name</th>
-                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Role</th>
-                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Status</th>
-                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase text-right">Manage</th>
-                                        </>
-                                    )}
-                                    {activeTab === 'slas' && (
-                                        <>
-                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Priority Level</th>
-                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Deadline</th>
-                                        </>
-                                    )}
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {data.map((item, index) => (
-                                    <tr key={item.id || index} className="hover:bg-slate-50/50 transition-colors">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse min-w-[700px]">
+                                <thead>
+                                    <tr className="bg-slate-50 border-b border-slate-200">
                                         {activeTab === 'audit' && (
                                             <>
-                                                <td className="px-6 py-4 text-sm font-medium text-slate-500 whitespace-nowrap">{new Date(item.timestamp).toLocaleString()}</td>
-                                                <td className="px-6 py-4"><span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">{item.action}</span></td>
-                                                <td className="px-6 py-4 text-sm font-medium text-slate-900">{item.performedBy}</td>
-                                                <td className="px-6 py-4 text-sm text-slate-600">{item.details}</td>
+                                                <th className="px-4 sm:px-6 py-4 text-xs font-bold text-slate-500 uppercase">Timestamp</th>
+                                                <th className="px-4 sm:px-6 py-4 text-xs font-bold text-slate-500 uppercase">Action</th>
+                                                <th className="px-4 sm:px-6 py-4 text-xs font-bold text-slate-500 uppercase">Performed By</th>
+                                                <th className="px-4 sm:px-6 py-4 text-xs font-bold text-slate-500 uppercase">Details</th>
                                             </>
                                         )}
                                         {activeTab === 'teams' && (
                                             <>
-                                                <td className="px-6 py-4 text-sm font-mono font-bold text-slate-500">#{item.id}</td>
-                                                <td className="px-6 py-4 text-sm font-bold text-slate-900">{item.name}</td>
-                                                <td className="px-6 py-4">
-                                                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                                                        {item.handlesCategory}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    {item.agents && item.agents.length > 0 ? (
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {item.agents.map(agent => (
-                                                                <span key={agent.id} className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                                                                    {agent.name}
-                                                                    <button 
-                                                                        onClick={() => {
-                                                                            setMoveData({ agentId: agent.id, oldTeamId: item.id, newTeamId: '', agentName: agent.name });
-                                                                            setShowMoveModal(true);
-                                                                        }}
-                                                                        className="ml-2 px-1.5 py-0.5 text-xs font-bold text-blue-600 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 transition-colors"
-                                                                    >
-                                                                        Reassign
-                                                                    </button>
-                                                                    <button 
-                                                                        onClick={() => handleRemoveAgentFromTeam(item.id, agent.id)}
-                                                                        className="ml-1 p-0.5 text-slate-400 hover:text-red-500 transition-colors"
-                                                                        title="Remove from team"
-                                                                    >
-                                                                        <XMarkIcon className="w-3.5 h-3.5" />
-                                                                    </button>
-                                                                </span>
-                                                            ))}
-                                                        </div>
-                                                    ) : (
-                                                        <span className="text-sm font-medium text-slate-400 italic">No agents assigned</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <button 
-                                                        onClick={() => { setSelectedTeamId(item.id); setShowAssignModal(true); }}
-                                                        className="text-sm font-bold text-purple-600 hover:text-purple-800"
-                                                    >
-                                                        + Assign Agent
-                                                    </button>
-                                                </td>
+                                                <th className="px-4 sm:px-6 py-4 text-xs font-bold text-slate-500 uppercase">Team Name</th>
+                                                <th className="px-4 sm:px-6 py-4 text-xs font-bold text-slate-500 uppercase">AI Route</th>
+                                                <th className="px-4 sm:px-6 py-4 text-xs font-bold text-slate-500 uppercase">Agents</th>
+                                                <th className="px-4 sm:px-6 py-4 text-xs font-bold text-slate-500 uppercase text-right">Actions</th>
                                             </>
                                         )}
                                         {activeTab === 'staff' && (
                                             <>
-                                                <td className="px-6 py-4">
-                                                    <div className="text-sm font-bold text-slate-900">{item.name}</div>
-                                                    <div className="text-xs font-medium text-slate-500">{item.email}</div>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold border ${item.role === 'MANAGER' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
-                                                        {item.role === 'MANAGER' ? 'Global Supervisor' : 'Support Agent'}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${item.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                                                        {item.isActive ? 'Active' : 'Blocked'}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <div className="flex justify-end space-x-2">
-                                                        <button 
-                                                            onClick={() => handleToggleStaffStatus(item.id)}
-                                                            className={`p-1.5 rounded-lg border transition-colors ${item.isActive ? 'text-slate-400 border-slate-200 hover:text-amber-600 hover:bg-amber-50 hover:border-amber-200' : 'text-emerald-600 border-emerald-200 bg-emerald-50 hover:bg-emerald-100'}`}
-                                                            title={item.isActive ? "Block User" : "Unblock User"}
-                                                        >
-                                                            {item.isActive ? <NoSymbolIcon className="w-5 h-5" /> : <CheckCircleIcon className="w-5 h-5" />}
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => handleDeleteStaff(item.id)}
-                                                            className="p-1.5 text-slate-400 border border-slate-200 rounded-lg hover:text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors"
-                                                            title="Delete User"
-                                                        >
-                                                            <TrashIcon className="w-5 h-5" />
-                                                        </button>
-                                                    </div>
-                                                </td>
+                                                <th className="px-4 sm:px-6 py-4 text-xs font-bold text-slate-500 uppercase">User Name</th>
+                                                <th className="px-4 sm:px-6 py-4 text-xs font-bold text-slate-500 uppercase">Role</th>
+                                                <th className="px-4 sm:px-6 py-4 text-xs font-bold text-slate-500 uppercase">Status</th>
+                                                <th className="px-4 sm:px-6 py-4 text-xs font-bold text-slate-500 uppercase text-right">Manage</th>
                                             </>
                                         )}
                                         {activeTab === 'slas' && (
                                             <>
-                                                <td className="px-6 py-4"><span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-slate-900 text-white">{item.priority}</span></td>
-                                                <td className="px-6 py-4 text-sm font-bold text-slate-900">{item.deadlineHours} Hours</td>
+                                                <th className="px-4 sm:px-6 py-4 text-xs font-bold text-slate-500 uppercase">Priority Level</th>
+                                                <th className="px-4 sm:px-6 py-4 text-xs font-bold text-slate-500 uppercase">Deadline</th>
                                             </>
                                         )}
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {data.map((item, index) => (
+                                        <tr key={item.id || index} className="hover:bg-slate-50/50 transition-colors group">
+                                            {activeTab === 'audit' && (
+                                                <>
+                                                    <td className="px-4 sm:px-6 py-4 text-xs sm:text-sm font-medium text-slate-500 whitespace-nowrap">{new Date(item.timestamp).toLocaleString()}</td>
+                                                    <td className="px-4 sm:px-6 py-4"><span className="inline-flex items-center px-2 py-1 rounded-md text-[10px] sm:text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">{item.action}</span></td>
+                                                    <td className="px-4 sm:px-6 py-4 text-xs sm:text-sm font-medium text-slate-900">{item.performedBy}</td>
+                                                    <td className="px-4 sm:px-6 py-4 text-xs sm:text-sm text-slate-600 max-w-[200px] truncate">{item.details}</td>
+                                                </>
+                                            )}
+                                            {activeTab === 'teams' && (
+                                                <>
+                                                    <td className="px-4 sm:px-6 py-4 text-sm font-bold text-slate-900">{item.name}</td>
+                                                    <td className="px-4 sm:px-6 py-4">
+                                                        <span className="inline-flex items-center px-2 py-1 rounded-md text-[10px] sm:text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                                            {item.handlesCategory}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 sm:px-6 py-4">
+                                                        {item.agents && item.agents.length > 0 ? (
+                                                            <div className="flex flex-wrap gap-2">
+                                                                {item.agents.map(agent => (
+                                                                    <span key={agent.id} className="inline-flex items-center px-2 py-1 rounded-md text-[10px] sm:text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                                                                        {agent.name}
+                                                                        <div className="flex items-center ml-1 sm:ml-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                                                                            <button 
+                                                                                onClick={() => {
+                                                                                    setMoveData({ agentId: agent.id, oldTeamId: item.id, newTeamId: '', agentName: agent.name });
+                                                                                    setShowMoveModal(true);
+                                                                                }}
+                                                                                className="px-1 py-0.5 text-blue-600 hover:bg-blue-50 rounded"
+                                                                                title="Reassign Agent"
+                                                                            >
+                                                                                <ArrowsRightLeftIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                                                                            </button>
+                                                                            <button 
+                                                                                onClick={() => handleRemoveAgentFromTeam(item.id, agent.id)}
+                                                                                className="p-0.5 text-slate-400 hover:text-red-500 rounded"
+                                                                                title="Remove from team"
+                                                                            >
+                                                                                <XMarkIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                                                                            </button>
+                                                                        </div>
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-xs sm:text-sm font-medium text-slate-400 italic">No agents assigned</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-4 sm:px-6 py-4 text-right">
+                                                        <button 
+                                                            onClick={() => { setSelectedTeamId(item.id); setShowAssignModal(true); }}
+                                                            className="text-xs sm:text-sm font-bold text-purple-600 hover:text-purple-800 whitespace-nowrap"
+                                                        >
+                                                            + Assign Agent
+                                                        </button>
+                                                    </td>
+                                                </>
+                                            )}
+                                            {activeTab === 'staff' && (
+                                                <>
+                                                    <td className="px-4 sm:px-6 py-4">
+                                                        <div className="text-sm font-bold text-slate-900">{item.name}</div>
+                                                        <div className="text-xs font-medium text-slate-500">{item.email}</div>
+                                                    </td>
+                                                    <td className="px-4 sm:px-6 py-4">
+                                                        <span className={`inline-flex items-center px-2 py-1 rounded-md text-[10px] sm:text-xs font-bold border ${item.role === 'MANAGER' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
+                                                            {item.role === 'MANAGER' ? 'Global Supervisor' : 'Support Agent'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 sm:px-6 py-4">
+                                                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-[10px] sm:text-xs font-bold ${item.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                                                            {item.isActive ? 'Active' : 'Blocked'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 sm:px-6 py-4 text-right">
+                                                        <div className="flex justify-end space-x-2">
+                                                            <button 
+                                                                onClick={() => handleToggleStaffStatus(item.id)}
+                                                                className={`p-1.5 rounded-lg border transition-colors ${item.isActive ? 'text-slate-400 border-slate-200 hover:text-amber-600 hover:bg-amber-50 hover:border-amber-200' : 'text-emerald-600 border-emerald-200 bg-emerald-50 hover:bg-emerald-100'}`}
+                                                                title={item.isActive ? "Block User" : "Unblock User"}
+                                                            >
+                                                                {item.isActive ? <NoSymbolIcon className="w-4 h-4 sm:w-5 sm:h-5" /> : <CheckCircleIcon className="w-4 h-4 sm:w-5 sm:h-5" />}
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => handleDeleteStaff(item.id)}
+                                                                className="p-1.5 text-slate-400 border border-slate-200 rounded-lg hover:text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors"
+                                                                title="Delete User"
+                                                            >
+                                                                <TrashIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </>
+                                            )}
+                                            {activeTab === 'slas' && (
+                                                <>
+                                                    <td className="px-4 sm:px-6 py-4"><span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-bold bg-slate-900 text-white">{item.priority}</span></td>
+                                                    <td className="px-4 sm:px-6 py-4 text-sm font-bold text-slate-900">{item.deadlineHours} Hours</td>
+                                                </>
+                                            )}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     )}
                 </div>
             </div>
 
+            {/* --- Modals (Fixed Padding & Widths for Mobile) --- */}
+
             {/* Create Staff Modal */}
             {showStaffModal && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50">
-                    <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                    <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-xl w-full max-w-md">
                         <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-xl font-extrabold text-slate-900">Add New Staff</h2>
-                            <button onClick={() => setShowStaffModal(false)} className="text-slate-400 hover:text-slate-600"><XMarkIcon className="w-6 h-6" /></button>
+                            <h2 className="text-lg sm:text-xl font-extrabold text-slate-900">Add New Staff</h2>
+                            <button onClick={() => setShowStaffModal(false)} className="text-slate-400 hover:text-slate-600 -mr-2"><XMarkIcon className="w-6 h-6" /></button>
                         </div>
-                        <form onSubmit={handleCreateStaff} className="space-y-5">
+                        <form onSubmit={handleCreateStaff} className="space-y-4 sm:space-y-5">
                             <div>
                                 <label className={labelClass}>Full Name</label>
                                 <input name="name" onChange={handleInputChange} placeholder="John Doe" required className={inputClass} />
@@ -483,7 +504,7 @@ const AdminDashboard = () => {
                                 </select>
                             </div>
                             <div className="pt-2">
-                                <button type="submit" className="w-full py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-colors shadow-sm">Create Staff Member</button>
+                                <button type="submit" className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-sm">Create Staff Member</button>
                             </div>
                         </form>
                     </div>
@@ -492,13 +513,13 @@ const AdminDashboard = () => {
 
             {/* Create Team Modal */}
             {showTeamModal && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50">
-                    <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                    <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-xl w-full max-w-md">
                         <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-xl font-extrabold text-slate-900">Create Support Team</h2>
-                            <button onClick={() => setShowTeamModal(false)} className="text-slate-400 hover:text-slate-600"><XMarkIcon className="w-6 h-6" /></button>
+                            <h2 className="text-lg sm:text-xl font-extrabold text-slate-900">Create Support Team</h2>
+                            <button onClick={() => setShowTeamModal(false)} className="text-slate-400 hover:text-slate-600 -mr-2"><XMarkIcon className="w-6 h-6" /></button>
                         </div>
-                        <form onSubmit={handleCreateTeam} className="space-y-5">
+                        <form onSubmit={handleCreateTeam} className="space-y-4 sm:space-y-5">
                             <div>
                                 <label className={labelClass}>Team Name</label>
                                 <input name="teamName" onChange={handleInputChange} placeholder="e.g. Billing Squad" required className={inputClass} />
@@ -523,31 +544,21 @@ const AdminDashboard = () => {
 
             {/* Assign Agent Modal */}
             {showAssignModal && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50">
-                    <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                    <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-xl w-full max-w-md">
                         <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-xl font-extrabold text-slate-900">Assign Agent</h2>
-                            <button onClick={() => setShowAssignModal(false)} className="text-slate-400 hover:text-slate-600"><XMarkIcon className="w-6 h-6" /></button>
+                            <h2 className="text-lg sm:text-xl font-extrabold text-slate-900">Assign Agent</h2>
+                            <button onClick={() => setShowAssignModal(false)} className="text-slate-400 hover:text-slate-600 -mr-2"><XMarkIcon className="w-6 h-6" /></button>
                         </div>
-                        <form onSubmit={handleAssignAgent} className="space-y-5">
+                        <form onSubmit={handleAssignAgent} className="space-y-4 sm:space-y-5">
                             <div>
                                 <label className={labelClass}>Select Available Agent</label>
-                                <select 
-                                    name="agentId" 
-                                    onChange={handleInputChange} 
-                                    value={formData.agentId}
-                                    required 
-                                    className={inputClass}
-                                >
+                                <select name="agentId" onChange={handleInputChange} value={formData.agentId} required className={inputClass}>
                                     <option value="" disabled>Choose an agent...</option>
                                     {unassignedAgents.map(agent => (
-                                        <option key={agent.id} value={agent.id}>
-                                            {agent.name} ({agent.email})
-                                        </option>
+                                        <option key={agent.id} value={agent.id}>{agent.name} ({agent.email})</option>
                                     ))}
-                                    {unassignedAgents.length === 0 && (
-                                        <option value="" disabled>No available agents found.</option>
-                                    )}
+                                    {unassignedAgents.length === 0 && <option value="" disabled>No available agents found.</option>}
                                 </select>
                             </div>
                             <div className="pt-2">
@@ -560,26 +571,23 @@ const AdminDashboard = () => {
 
             {/* Move Agent Modal */}
             {showMoveModal && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50">
-                    <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                    <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-xl w-full max-w-md">
                         <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-xl font-extrabold text-slate-900">Reassign {moveData.agentName}</h2>
-                            <button onClick={() => setShowMoveModal(false)} className="text-slate-400 hover:text-slate-600"><XMarkIcon className="w-6 h-6" /></button>
+                            <h2 className="text-lg sm:text-xl font-extrabold text-slate-900">Reassign {moveData.agentName}</h2>
+                            <button onClick={() => setShowMoveModal(false)} className="text-slate-400 hover:text-slate-600 -mr-2"><XMarkIcon className="w-6 h-6" /></button>
                         </div>
-                        <form onSubmit={handleMoveAgent} className="space-y-5">
+                        <form onSubmit={handleMoveAgent} className="space-y-4 sm:space-y-5">
                             <div>
                                 <label className={labelClass}>Destination Team</label>
                                 <select 
-                                    required
-                                    value={moveData.newTeamId}
-                                    onChange={(e) => setMoveData({...moveData, newTeamId: e.target.value})}
+                                    required value={moveData.newTeamId} 
+                                    onChange={(e) => setMoveData({...moveData, newTeamId: e.target.value})} 
                                     className={inputClass}
                                 >
                                     <option value="" disabled>Select destination team...</option>
                                     {data.filter(t => t.id !== moveData.oldTeamId).map(team => (
-                                        <option key={team.id} value={team.id}>
-                                            {team.name} ({team.handlesCategory})
-                                        </option>
+                                        <option key={team.id} value={team.id}>{team.name} ({team.handlesCategory})</option>
                                     ))}
                                 </select>
                             </div>

@@ -13,12 +13,13 @@ import {
     TrashIcon,
     NoSymbolIcon,
     CheckCircleIcon,
-    XMarkIcon
+    XMarkIcon,
+    ArrowsRightLeftIcon // NEW: Added swap icon
 } from '@heroicons/react/24/outline';
 
 const AdminDashboard = () => {
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState('audit'); // 'audit', 'teams', 'slas', 'staff'
+    const [activeTab, setActiveTab] = useState('audit'); 
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -27,10 +28,12 @@ const AdminDashboard = () => {
     const [showStaffModal, setShowStaffModal] = useState(false);
     const [showTeamModal, setShowTeamModal] = useState(false);
     const [showAssignModal, setShowAssignModal] = useState(false);
+    const [showMoveModal, setShowMoveModal] = useState(false); // NEW: Move Modal state
     const [selectedTeamId, setSelectedTeamId] = useState(null);
 
-    // --- Agent Dropdown State ---
+    // --- Agent Dropdown & Move States ---
     const [availableAgents, setAvailableAgents] = useState([]);
+    const [moveData, setMoveData] = useState({ agentId: '', oldTeamId: '', newTeamId: '', agentName: '' });
 
     // --- Form States ---
     const [formData, setFormData] = useState({
@@ -58,7 +61,7 @@ const AdminDashboard = () => {
             if (activeTab === 'audit') endpoint = '/api/admin/audit-logs';
             if (activeTab === 'teams') endpoint = '/api/admin/teams';
             if (activeTab === 'slas') endpoint = '/api/admin/slas';
-            if (activeTab === 'staff') endpoint = '/api/admin/staff/all'; // NEW: Staff endpoint
+            if (activeTab === 'staff') endpoint = '/api/admin/staff/all';
 
             const response = await fetch(`${API_BASE}${endpoint}`, {
                 headers: {
@@ -126,7 +129,6 @@ const AdminDashboard = () => {
         }
     };
 
-    // NEW: Toggle Block/Unblock Staff
     const handleToggleStaffStatus = async (staffId) => {
         try {
             const token = localStorage.getItem('userToken');
@@ -139,7 +141,6 @@ const AdminDashboard = () => {
         } catch (err) { alert(err.message); }
     };
 
-    // NEW: Delete Staff
     const handleDeleteStaff = async (staffId) => {
         if (!window.confirm("Are you sure you want to permanently delete this user? This cannot be undone.")) return;
         try {
@@ -185,7 +186,6 @@ const AdminDashboard = () => {
         } catch (err) { alert(err.message); }
     };
 
-    // NEW: Remove Agent from Team (Reassignment)
     const handleRemoveAgentFromTeam = async (teamId, agentId) => {
         if(!window.confirm("Remove this agent from the team? They will be unassigned.")) return;
         try {
@@ -197,6 +197,22 @@ const AdminDashboard = () => {
             if (!response.ok) throw new Error("Failed to remove agent");
             fetchAdminData();
             fetchAgentsList();
+        } catch (err) { alert(err.message); }
+    };
+
+    // NEW: Handle Moving Agent between teams
+    const handleMoveAgent = async (e) => {
+        e.preventDefault();
+        try {
+            const token = localStorage.getItem('userToken');
+            const response = await fetch(`${API_BASE}/api/admin/teams/${moveData.oldTeamId}/agents/${moveData.agentId}/move/${moveData.newTeamId}`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) throw new Error("Failed to move agent");
+            setShowMoveModal(false);
+            setMoveData({ agentId: '', oldTeamId: '', newTeamId: '', agentName: '' });
+            fetchAdminData();
         } catch (err) { alert(err.message); }
     };
 
@@ -212,7 +228,6 @@ const AdminDashboard = () => {
             : "w-full flex items-center px-4 py-3 text-slate-300 hover:bg-slate-800 hover:text-white rounded-xl font-medium transition-all border border-transparent";
     };
 
-    // SMART FILTER: Calculate unassigned agents
     const assignedAgentIds = activeTab === 'teams' ? data.flatMap(team => team.agents?.map(a => a.id) || []) : [];
     const unassignedAgents = availableAgents.filter(agent => !assignedAgentIds.includes(agent.id));
 
@@ -236,7 +251,6 @@ const AdminDashboard = () => {
                         <button onClick={() => setActiveTab('teams')} className={getTabClass('teams')}>
                             <UserGroupIcon className="w-5 h-5 mr-3" /> Support Teams
                         </button>
-                        {/* NEW TAB ADDED HERE */}
                         <button onClick={() => setActiveTab('staff')} className={getTabClass('staff')}>
                             <UserIcon className="w-5 h-5 mr-3" /> Staff Directory
                         </button>
@@ -275,7 +289,6 @@ const AdminDashboard = () => {
                         </p>
                     </div>
 
-                    {/* Action Buttons */}
                     <div className="flex space-x-3">
                         {activeTab === 'staff' && (
                             <button onClick={() => setShowStaffModal(true)} className="flex items-center px-4 py-2 bg-indigo-100 text-indigo-700 font-bold rounded-lg hover:bg-indigo-200 transition">
@@ -356,12 +369,24 @@ const AdminDashboard = () => {
                                                     {item.agents && item.agents.length > 0 ? (
                                                         <div className="flex flex-wrap gap-2">
                                                             {item.agents.map(agent => (
-                                                                // NEW: Agent Badge with Remove 'X' Button
                                                                 <span key={agent.id} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200 group">
                                                                     {agent.name}
+                                                                    
+                                                                    {/* NEW: Move Agent Button */}
+                                                                    <button 
+                                                                        onClick={() => {
+                                                                            setMoveData({ agentId: agent.id, oldTeamId: item.id, newTeamId: '', agentName: agent.name });
+                                                                            setShowMoveModal(true);
+                                                                        }}
+                                                                        className="ml-2 text-slate-400 hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                        title="Move to another team"
+                                                                    >
+                                                                        <ArrowsRightLeftIcon className="w-3.5 h-3.5" />
+                                                                    </button>
+
                                                                     <button 
                                                                         onClick={() => handleRemoveAgentFromTeam(item.id, agent.id)}
-                                                                        className="ml-1.5 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                        className="ml-1 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
                                                                         title="Remove from team"
                                                                     >
                                                                         <XMarkIcon className="w-3.5 h-3.5" />
@@ -435,7 +460,6 @@ const AdminDashboard = () => {
 
             {/* --- MODALS --- */}
             
-            {/* Create Staff Modal */}
             {showStaffModal && (
                 <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50">
                     <div className="bg-white p-8 rounded-2xl shadow-xl w-96">
@@ -457,7 +481,6 @@ const AdminDashboard = () => {
                 </div>
             )}
 
-            {/* Create Team Modal */}
             {showTeamModal && (
                 <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50">
                     <div className="bg-white p-8 rounded-2xl shadow-xl w-96">
@@ -474,7 +497,6 @@ const AdminDashboard = () => {
                 </div>
             )}
 
-            {/* Assign Agent Modal */}
             {showAssignModal && (
                 <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50">
                     <div className="bg-white p-8 rounded-2xl shadow-xl w-96">
@@ -501,6 +523,35 @@ const AdminDashboard = () => {
                             <div className="flex justify-end space-x-2 pt-4">
                                 <button type="button" onClick={() => setShowAssignModal(false)} className="px-4 py-2 text-slate-500 hover:text-slate-700 font-medium">Cancel</button>
                                 <button type="submit" disabled={unassignedAgents.length === 0} className="px-4 py-2 bg-purple-600 text-white rounded-lg font-bold hover:bg-purple-700 disabled:opacity-50">Assign</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* NEW: Move Agent Modal */}
+            {showMoveModal && (
+                <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50">
+                    <div className="bg-white p-8 rounded-2xl shadow-xl w-96">
+                        <h2 className="text-xl font-bold mb-4">Move {moveData.agentName}</h2>
+                        <form onSubmit={handleMoveAgent} className="space-y-4">
+                            <select 
+                                required
+                                value={moveData.newTeamId}
+                                onChange={(e) => setMoveData({...moveData, newTeamId: e.target.value})}
+                                className="w-full p-2 border rounded-lg bg-slate-50 text-slate-700"
+                            >
+                                <option value="" disabled>Select destination team...</option>
+                                {/* Only show teams that are NOT the agent's current team */}
+                                {data.filter(t => t.id !== moveData.oldTeamId).map(team => (
+                                    <option key={team.id} value={team.id}>
+                                        {team.name} ({team.handlesCategory})
+                                    </option>
+                                ))}
+                            </select>
+                            <div className="flex justify-end space-x-2 pt-4">
+                                <button type="button" onClick={() => setShowMoveModal(false)} className="px-4 py-2 text-slate-500 hover:text-slate-700 font-medium">Cancel</button>
+                                <button type="submit" disabled={!moveData.newTeamId} className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 disabled:opacity-50">Move Agent</button>
                             </div>
                         </form>
                     </div>

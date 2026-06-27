@@ -16,7 +16,8 @@ import {
     QuestionMarkCircleIcon,
     CpuChipIcon,
     ShieldCheckIcon,
-    GlobeAltIcon
+    GlobeAltIcon,
+    Bars3Icon // NEW: Added hamburger icon for mobile menu
 } from '@heroicons/react/24/outline';
 
 const Dashboard = () => {
@@ -27,8 +28,9 @@ const Dashboard = () => {
     const [formData, setFormData] = useState({ title: '', description: '' });
     const [submitting, setSubmitting] = useState(false);
     
-    // NEW: Filter State
-    const [activeFilter, setActiveFilter] = useState('ALL'); // 'ALL', 'ACTIVE', or 'RESOLVED'
+    // Filter & UI State
+    const [activeFilter, setActiveFilter] = useState('ALL');
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false); // NEW: Mobile sidebar state
     
     // Conversation State
     const [selectedTicket, setSelectedTicket] = useState(null);
@@ -38,15 +40,12 @@ const Dashboard = () => {
     const [actionLoading, setActionLoading] = useState(false);
 
     const navigate = useNavigate();
-
-    // FIXED: Added the production API URL for the direct fetch calls below
     const API_BASE = 'https://deskmind-3kq3.onrender.com';
 
     useEffect(() => {
         loadTickets();
     }, []);
 
-    // Fetch replies when a ticket is opened
     useEffect(() => {
         if (selectedTicket) {
             fetchReplies(selectedTicket.id);
@@ -83,7 +82,7 @@ const Dashboard = () => {
             setTickets([newTicket, ...tickets]); 
             setShowNewTicketModal(false);
             setFormData({ title: '', description: '' });
-            setActiveFilter('ALL'); // Reset filter to show the new ticket
+            setActiveFilter('ALL');
         } catch (error) {
             alert("Failed to create ticket. Please try again.");
         } finally {
@@ -95,7 +94,6 @@ const Dashboard = () => {
         setLoadingReplies(true);
         try {
             const token = localStorage.getItem('userToken');
-            // FIXED: Replaced localhost with dynamic API_BASE
             const response = await fetch(`${API_BASE}/api/tickets/${ticketId}/replies`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -116,7 +114,6 @@ const Dashboard = () => {
         
         try {
             const token = localStorage.getItem('userToken');
-            // FIXED: Replaced localhost with dynamic API_BASE
             const response = await fetch(`${API_BASE}/api/tickets/${selectedTicket.id}/replies`, {
                 method: 'POST',
                 headers: {
@@ -125,7 +122,7 @@ const Dashboard = () => {
                 },
                 body: JSON.stringify({
                     message: replyMessage,
-                    internal: false // Customers can never send internal notes
+                    internal: false
                 })
             });
 
@@ -148,7 +145,7 @@ const Dashboard = () => {
     };
 
     // ==========================================
-    // UI HELPERS & FILTERING
+    // UI HELPERS
     // ==========================================
 
     const getCategoryIcon = (category) => {
@@ -207,33 +204,51 @@ const Dashboard = () => {
         return <ClockIcon className="w-3 h-3 mr-1" />;
     };
 
-    // Calculate metrics for the cards
     const totalTickets = tickets.length;
     const activeTickets = tickets.filter(t => ['OPEN', 'IN_PROGRESS', 'WAITING'].includes(t.status)).length;
     const resolvedTickets = tickets.filter(t => ['RESOLVED', 'CLOSED'].includes(t.status)).length;
 
-    // Apply the active filter to the table data
     const filteredTickets = tickets.filter(ticket => {
         if (activeFilter === 'ACTIVE') return ['OPEN', 'IN_PROGRESS', 'WAITING'].includes(ticket.status);
         if (activeFilter === 'RESOLVED') return ['RESOLVED', 'CLOSED'].includes(ticket.status);
-        return true; // 'ALL'
+        return true; 
     });
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100/50 flex font-sans text-gray-900">
+        // FIXED: Changed flex to flex-col on mobile, md:flex-row on desktop
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100/50 flex flex-col md:flex-row font-sans text-gray-900 relative">
             
-            {/* Sidebar */}
-            <div className="w-64 bg-gradient-to-b from-gray-900 to-gray-800 text-white flex flex-col justify-between shadow-2xl z-10">
+            {/* NEW: Mobile Top Header */}
+            <div className="md:hidden bg-gradient-to-r from-gray-900 to-gray-800 text-white p-4 flex justify-between items-center shadow-md sticky top-0 z-20">
+                <div className="flex items-center space-x-2">
+                    <TicketIcon className="w-6 h-6 text-blue-400" />
+                    <h2 className="text-xl font-extrabold tracking-tight">DeskMind</h2>
+                </div>
+                <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 -mr-2 text-gray-300 hover:text-white transition-colors">
+                    {isSidebarOpen ? <XMarkIcon className="w-6 h-6" /> : <Bars3Icon className="w-6 h-6" />}
+                </button>
+            </div>
+
+            {/* NEW: Overlay for Mobile Sidebar */}
+            {isSidebarOpen && (
+                <div 
+                    className="fixed inset-0 bg-gray-900/60 z-30 md:hidden backdrop-blur-sm"
+                    onClick={() => setIsSidebarOpen(false)}
+                />
+            )}
+
+            {/* Sidebar (Responsive drawer on mobile, static on desktop) */}
+            <div className={`fixed inset-y-0 left-0 w-64 bg-gradient-to-b from-gray-900 to-gray-800 text-white flex flex-col justify-between shadow-2xl z-40 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                 <div className="p-6">
-                    <div className="flex items-center space-x-2 mb-1">
+                    <div className="hidden md:flex items-center space-x-2 mb-1">
                         <TicketIcon className="w-8 h-8 text-blue-400" />
                         <h2 className="text-2xl font-extrabold tracking-tight">DeskMind</h2>
                     </div>
-                    <p className="text-xs font-medium text-gray-400 uppercase tracking-widest ml-10">Customer Portal</p>
+                    <p className="hidden md:block text-xs font-medium text-gray-400 uppercase tracking-widest ml-10">Customer Portal</p>
                     
-                    <div className="w-full h-px bg-gradient-to-r from-gray-700/50 to-transparent my-6"></div>
+                    <div className="hidden md:block w-full h-px bg-gradient-to-r from-gray-700/50 to-transparent my-6"></div>
                     
-                    <nav className="space-y-1">
+                    <nav className="space-y-1 mt-6 md:mt-0">
                         <button className="w-full flex items-center px-4 py-3 bg-blue-600 text-white rounded-xl font-medium shadow-lg shadow-blue-600/20 transition-all hover:bg-blue-700 active:scale-95">
                             <TicketIcon className="w-5 h-5 mr-3" />
                             My Tickets
@@ -252,16 +267,18 @@ const Dashboard = () => {
             </div>
 
             {/* Main Content Area */}
-            <div className="flex-1 px-8 py-10 md:px-12 overflow-y-auto">
+            {/* FIXED: Added w-full max-w-full and updated padding for mobile */}
+            <div className="flex-1 w-full max-w-full px-4 py-6 sm:px-8 sm:py-10 md:px-12 overflow-y-auto">
+                
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-8">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-6 sm:mb-8">
                     <div>
-                        <h1 className="text-3xl font-extrabold text-gray-900 mb-1">Support Tickets</h1>
-                        <p className="text-gray-500 font-medium">Manage and track your helpdesk requests</p>
+                        <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-1">Support Tickets</h1>
+                        <p className="text-sm sm:text-base text-gray-500 font-medium">Manage and track your helpdesk requests</p>
                     </div>
                     <button 
                         onClick={() => setShowNewTicketModal(true)}
-                        className="flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-600/30 transition-all hover:-translate-y-0.5 active:scale-95">
+                        className="w-full sm:w-auto flex items-center justify-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-600/30 transition-all hover:-translate-y-0.5 active:scale-95">
                         <PlusIcon className="w-5 h-5 mr-2" />
                         New Ticket
                     </button>
@@ -269,50 +286,47 @@ const Dashboard = () => {
 
                 {/* Interactive Filter Stats Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-                    {/* Total Tickets Card */}
                     <button 
                         onClick={() => setActiveFilter('ALL')}
-                        className={`p-6 bg-white rounded-2xl shadow-sm border transition-all text-left focus:outline-none ${activeFilter === 'ALL' ? 'border-blue-500 ring-1 ring-blue-500' : 'border-gray-100 hover:border-blue-300 hover:shadow-md'}`}
+                        className={`p-4 sm:p-6 bg-white rounded-2xl shadow-sm border transition-all text-left focus:outline-none ${activeFilter === 'ALL' ? 'border-blue-500 ring-1 ring-blue-500' : 'border-gray-100 hover:border-blue-300 hover:shadow-md'}`}
                     >
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Total Tickets</p>
-                                <p className="text-2xl font-bold text-gray-900 mt-1">{totalTickets}</p>
+                                <p className="text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wide">Total</p>
+                                <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{totalTickets}</p>
                             </div>
-                            <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">
-                                <TicketIcon className="w-6 h-6 text-blue-600" />
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 rounded-xl flex items-center justify-center">
+                                <TicketIcon className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
                             </div>
                         </div>
                     </button>
 
-                    {/* Active Tickets Card */}
                     <button 
                         onClick={() => setActiveFilter('ACTIVE')}
-                        className={`p-6 bg-white rounded-2xl shadow-sm border transition-all text-left focus:outline-none ${activeFilter === 'ACTIVE' ? 'border-emerald-500 ring-1 ring-emerald-500' : 'border-gray-100 hover:border-emerald-300 hover:shadow-md'}`}
+                        className={`p-4 sm:p-6 bg-white rounded-2xl shadow-sm border transition-all text-left focus:outline-none ${activeFilter === 'ACTIVE' ? 'border-emerald-500 ring-1 ring-emerald-500' : 'border-gray-100 hover:border-emerald-300 hover:shadow-md'}`}
                     >
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Active Issues</p>
-                                <p className="text-2xl font-bold text-emerald-600 mt-1">{activeTickets}</p>
+                                <p className="text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wide">Active</p>
+                                <p className="text-xl sm:text-2xl font-bold text-emerald-600 mt-1">{activeTickets}</p>
                             </div>
-                            <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center">
-                                <ClockIcon className="w-6 h-6 text-emerald-600" />
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-50 rounded-xl flex items-center justify-center">
+                                <ClockIcon className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-600" />
                             </div>
                         </div>
                     </button>
 
-                    {/* Resolved Tickets Card */}
                     <button 
                         onClick={() => setActiveFilter('RESOLVED')}
-                        className={`p-6 bg-white rounded-2xl shadow-sm border transition-all text-left focus:outline-none ${activeFilter === 'RESOLVED' ? 'border-purple-500 ring-1 ring-purple-500' : 'border-gray-100 hover:border-purple-300 hover:shadow-md'}`}
+                        className={`p-4 sm:p-6 bg-white rounded-2xl shadow-sm border transition-all text-left focus:outline-none ${activeFilter === 'RESOLVED' ? 'border-purple-500 ring-1 ring-purple-500' : 'border-gray-100 hover:border-purple-300 hover:shadow-md'}`}
                     >
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Resolved</p>
-                                <p className="text-2xl font-bold text-purple-600 mt-1">{resolvedTickets}</p>
+                                <p className="text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wide">Resolved</p>
+                                <p className="text-xl sm:text-2xl font-bold text-purple-600 mt-1">{resolvedTickets}</p>
                             </div>
-                            <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center">
-                                <CheckCircleIcon className="w-6 h-6 text-purple-600" />
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-50 rounded-xl flex items-center justify-center">
+                                <CheckCircleIcon className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />
                             </div>
                         </div>
                     </button>
@@ -321,17 +335,16 @@ const Dashboard = () => {
                 {/* Loading State */}
                 {loading ? (
                     <div className="flex flex-col items-center justify-center h-64 bg-white rounded-3xl shadow-sm border border-gray-100">
-                        <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div>
+                        <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-4 border-blue-600 border-t-transparent"></div>
                         <p className="mt-4 text-sm font-medium text-gray-500">Loading tickets...</p>
                     </div>
                 ) : filteredTickets.length === 0 ? (
-                    /* Empty State - Dynamically changes based on filter */
-                    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-16 text-center">
-                        <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <InboxIcon className="w-10 h-10 text-gray-400" />
+                    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 sm:p-16 text-center">
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <InboxIcon className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400" />
                         </div>
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">No tickets found</h3>
-                        <p className="text-gray-500 mb-6">
+                        <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">No tickets found</h3>
+                        <p className="text-sm sm:text-base text-gray-500 mb-6 px-4">
                             {tickets.length === 0 
                                 ? "You don't have any open support requests right now." 
                                 : `No tickets match the "${activeFilter.toLowerCase()}" filter.`}
@@ -342,58 +355,58 @@ const Dashboard = () => {
                                 onClick={() => setShowNewTicketModal(true)}
                                 className="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-600/30 transition-all">
                                 <PlusIcon className="w-5 h-5 mr-2" />
-                                Create your first ticket
+                                Create ticket
                             </button>
                         ) : (
                             <button 
                                 onClick={() => setActiveFilter('ALL')}
                                 className="inline-flex items-center px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-all">
-                                View All Tickets
+                                View All
                             </button>
                         )}
                     </div>
                 ) : (
-                    /* Tickets Table - Now maps over filteredTickets */
-                    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+                        {/* FIXED: The overflow-x-auto allows horizontal scrolling on small screens without breaking layout */}
                         <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
+                            <table className="w-full text-left border-collapse min-w-[600px]">
                                 <thead>
                                     <tr className="bg-gray-50/80 border-b border-gray-100">
-                                        <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Ticket ID</th>
-                                        <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Title</th>
-                                        <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Category</th>
-                                        <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Priority</th>
-                                        <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                                        <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Action</th>
+                                        <th className="px-4 sm:px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Ticket ID</th>
+                                        <th className="px-4 sm:px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Title</th>
+                                        <th className="px-4 sm:px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Category</th>
+                                        <th className="px-4 sm:px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Priority</th>
+                                        <th className="px-4 sm:px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                                        <th className="px-4 sm:px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50">
                                     {filteredTickets.map(ticket => (
-                                        <tr key={ticket.id} className="hover:bg-gray-50/50 transition-colors group cursor-pointer" onClick={() => setSelectedTicket(ticket)}>
-                                            <td className="px-6 py-4 font-mono text-sm font-semibold text-gray-500">#{ticket.ticketNumber}</td>
-                                            <td className="px-6 py-4 text-sm font-medium text-gray-900">{ticket.title}</td>
-                                            <td className="px-6 py-4">
-                                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getCategoryColor(ticket.category)}`}>
+                                        <tr key={ticket.id} className="hover:bg-gray-50/50 transition-colors cursor-pointer" onClick={() => setSelectedTicket(ticket)}>
+                                            <td className="px-4 sm:px-6 py-4 font-mono text-sm font-semibold text-gray-500">#{ticket.ticketNumber}</td>
+                                            <td className="px-4 sm:px-6 py-4 text-sm font-medium text-gray-900 max-w-[200px] truncate">{ticket.title}</td>
+                                            <td className="px-4 sm:px-6 py-4">
+                                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-semibold ${getCategoryColor(ticket.category)}`}>
                                                     {getCategoryIcon(ticket.category)}
                                                     {ticket.category || 'GENERAL'}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4">
-                                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${getPriorityBadge(ticket.priority)}`}>
+                                            <td className="px-4 sm:px-6 py-4">
+                                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold ${getPriorityBadge(ticket.priority)}`}>
                                                     {getPriorityIcon(ticket.priority)}
                                                     {ticket.priority}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4">
-                                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${getStatusBadge(ticket.status)}`}>
+                                            <td className="px-4 sm:px-6 py-4">
+                                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold ${getStatusBadge(ticket.status)}`}>
                                                     {getStatusIcon(ticket.status)}
                                                     {ticket.status.replace('_', ' ')}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4 text-right">
+                                            <td className="px-4 sm:px-6 py-4 text-right">
                                                 <button 
                                                     onClick={(e) => { e.stopPropagation(); setSelectedTicket(ticket); }}
-                                                    className="px-4 py-2 bg-white border border-gray-200 hover:border-blue-600 hover:text-blue-600 text-gray-700 text-sm font-bold rounded-lg transition-colors">
+                                                    className="px-3 py-1.5 sm:px-4 sm:py-2 bg-white border border-gray-200 hover:border-blue-600 hover:text-blue-600 text-gray-700 text-xs sm:text-sm font-bold rounded-lg transition-colors">
                                                     View
                                                 </button>
                                             </td>
@@ -409,20 +422,21 @@ const Dashboard = () => {
             {/* Create Ticket Modal */}
             {showNewTicketModal && (
                 <>
-                    <div className="fixed inset-0 z-50 bg-gray-900/50 backdrop-blur-sm transition-opacity" onClick={() => setShowNewTicketModal(false)} />
+                    <div className="fixed inset-0 z-50 bg-gray-900/60 backdrop-blur-sm transition-opacity" onClick={() => setShowNewTicketModal(false)} />
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                            <div className="px-8 pt-8 pb-6 border-b border-gray-100 flex items-start justify-between">
+                        <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                            {/* FIXED: Reduced padding for mobile */}
+                            <div className="px-5 sm:px-8 pt-6 sm:pt-8 pb-4 sm:pb-6 border-b border-gray-100 flex items-start justify-between">
                                 <div>
-                                    <h3 className="text-2xl font-bold text-gray-900 mb-1">Create New Ticket</h3>
-                                    <p className="text-sm text-gray-500 font-medium">Describe your issue and we'll route it correctly</p>
+                                    <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">Create New Ticket</h3>
+                                    <p className="text-xs sm:text-sm text-gray-500 font-medium">Describe your issue and we'll route it correctly</p>
                                 </div>
                                 <button onClick={() => setShowNewTicketModal(false)} className="p-2 hover:bg-gray-100 rounded-xl transition-colors -mt-2 -mr-2">
                                     <XMarkIcon className="w-5 h-5 text-gray-500" />
                                 </button>
                             </div>
-                            <div className="p-8">
-                                <form onSubmit={handleCreateTicket} className="space-y-6">
+                            <div className="p-5 sm:p-8">
+                                <form onSubmit={handleCreateTicket} className="space-y-5 sm:space-y-6">
                                     <div>
                                         <label className="block text-sm font-bold text-gray-700 mb-2">Problem Title <span className="text-red-500">*</span></label>
                                         <input 
@@ -446,10 +460,10 @@ const Dashboard = () => {
                                         />
                                     </div>
                                     <div className="flex justify-end space-x-3 pt-2">
-                                        <button type="button" onClick={() => setShowNewTicketModal(false)} className="px-6 py-2.5 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors">
+                                        <button type="button" onClick={() => setShowNewTicketModal(false)} className="px-5 py-2.5 sm:px-6 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors">
                                             Cancel
                                         </button>
-                                        <button type="submit" disabled={submitting} className="flex items-center px-6 py-2.5 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/30 disabled:opacity-70 transition-all active:scale-95">
+                                        <button type="submit" disabled={submitting} className="flex items-center px-5 py-2.5 sm:px-6 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/30 disabled:opacity-70 transition-all active:scale-95">
                                             {submitting ? 'Creating...' : 'Submit Ticket'}
                                         </button>
                                     </div>
@@ -462,39 +476,40 @@ const Dashboard = () => {
 
             {/* View Conversation Modal */}
             {selectedTicket && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm">
-                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-gray-900/60 backdrop-blur-sm">
+                    {/* FIXED: H-full on mobile, rounded corners adjusted */}
+                    <div className="bg-white sm:rounded-3xl shadow-2xl w-full h-full sm:h-auto sm:max-h-[90vh] max-w-3xl flex flex-col">
                         
                         {/* Modal Header */}
-                        <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-start bg-gray-50/50">
+                        <div className="px-5 sm:px-8 py-5 sm:py-6 border-b border-gray-100 flex justify-between items-start bg-gray-50/50">
                             <div>
-                                <div className="flex items-center space-x-3 mb-2">
-                                    <span className="font-mono text-sm font-bold text-blue-600">{selectedTicket.ticketNumber}</span>
-                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${getStatusBadge(selectedTicket.status)}`}>
+                                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
+                                    <span className="font-mono text-xs sm:text-sm font-bold text-blue-600">{selectedTicket.ticketNumber}</span>
+                                    <span className={`inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold ${getStatusBadge(selectedTicket.status)}`}>
                                         {selectedTicket.status.replace('_', ' ')}
                                     </span>
                                 </div>
-                                <h3 className="text-2xl font-extrabold text-gray-900">{selectedTicket.title}</h3>
+                                <h3 className="text-xl sm:text-2xl font-extrabold text-gray-900">{selectedTicket.title}</h3>
                             </div>
-                            <button onClick={() => setSelectedTicket(null)} className="text-gray-400 hover:text-gray-600 text-2xl font-bold">×</button>
+                            <button onClick={() => setSelectedTicket(null)} className="text-gray-400 hover:text-gray-600 p-2">
+                                <XMarkIcon className="w-6 h-6" />
+                            </button>
                         </div>
                         
                         {/* Modal Body */}
-                        <div className="p-8 overflow-y-auto flex-1 bg-white">
+                        <div className="p-5 sm:p-8 overflow-y-auto flex-1 bg-white">
                             
-                            {/* Original Issue */}
-                            <div className="mb-8">
-                                <p className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-2">Your Original Request</p>
+                            <div className="mb-6 sm:mb-8">
+                                <p className="text-xs sm:text-sm font-bold text-gray-400 uppercase tracking-wider mb-2">Your Original Request</p>
                                 <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 text-gray-700 text-sm leading-relaxed">
                                     {selectedTicket.description}
                                 </div>
                             </div>
 
-                            <div className="border-t border-gray-100 pt-8">
-                                <p className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Conversation History</p>
+                            <div className="border-t border-gray-100 pt-6 sm:pt-8">
+                                <p className="text-xs sm:text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Conversation History</p>
                                 
-                                {/* Chat History List */}
-                                <div className="space-y-4 mb-6 pr-2">
+                                <div className="space-y-4 mb-6">
                                     {loadingReplies ? (
                                         <p className="text-sm text-gray-500 text-center py-4">Loading conversation...</p>
                                     ) : replies.length === 0 ? (
@@ -514,14 +529,13 @@ const Dashboard = () => {
                                     )}
                                 </div>
 
-                                {/* Type a New Message Box */}
                                 {selectedTicket.status !== 'CLOSED' && selectedTicket.status !== 'RESOLVED' && (
-                                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                                    <div className="bg-gray-50 p-3 sm:p-4 rounded-xl border border-gray-200">
                                         <textarea 
                                             rows="3"
                                             value={replyMessage}
                                             onChange={(e) => setReplyMessage(e.target.value)}
-                                            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 focus:outline-none transition-all text-sm font-medium resize-none placeholder:text-gray-400"
+                                            className="w-full px-3 sm:px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 focus:outline-none transition-all text-sm font-medium resize-none placeholder:text-gray-400"
                                             placeholder="Add a reply to this ticket..."
                                         />
                                         
@@ -529,7 +543,7 @@ const Dashboard = () => {
                                             <button 
                                                 onClick={handleSendReply}
                                                 disabled={actionLoading || !replyMessage.trim()}
-                                                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-sm transition-all disabled:opacity-70">
+                                                className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-sm transition-all disabled:opacity-70">
                                                 {actionLoading ? 'Sending...' : 'Send Reply'}
                                             </button>
                                         </div>

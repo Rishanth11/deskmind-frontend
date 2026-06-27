@@ -24,18 +24,15 @@ const AdminDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
-    // --- Modal States ---
     const [showStaffModal, setShowStaffModal] = useState(false);
     const [showTeamModal, setShowTeamModal] = useState(false);
     const [showAssignModal, setShowAssignModal] = useState(false);
     const [showMoveModal, setShowMoveModal] = useState(false);
     const [selectedTeamId, setSelectedTeamId] = useState(null);
 
-    // --- Agent Dropdown & Move States ---
     const [availableAgents, setAvailableAgents] = useState([]);
     const [moveData, setMoveData] = useState({ agentId: '', oldTeamId: '', newTeamId: '', agentName: '' });
 
-    // --- Form States ---
     const [formData, setFormData] = useState({
         name: '', email: '', password: '', role: 'AGENT',
         teamName: '', handlesCategory: '', agentId: ''
@@ -102,10 +99,6 @@ const AdminDashboard = () => {
     const handleInputChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
-
-    // ==========================================
-    // API ACTIONS
-    // ==========================================
 
     const handleCreateStaff = async (e) => {
         e.preventDefault();
@@ -230,7 +223,6 @@ const AdminDashboard = () => {
     const assignedAgentIds = activeTab === 'teams' ? data.flatMap(team => team.agents?.map(a => a.id) || []) : [];
     const unassignedAgents = availableAgents.filter(agent => !assignedAgentIds.includes(agent.id));
 
-    // Common Input Class for polished UI
     const inputClass = "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-600/20 focus:border-purple-600 outline-none transition-all text-sm font-medium text-slate-900 placeholder:text-slate-400";
     const labelClass = "block text-sm font-bold text-slate-700 mb-1.5";
 
@@ -272,10 +264,9 @@ const AdminDashboard = () => {
                 </div>
             </div>
 
-            {/* Main Content Area */}
+            {/* Main Content */}
             <div className="flex-1 px-8 py-10 overflow-y-auto relative">
                 
-                {/* Header Section */}
                 <div className="mb-8 flex justify-between items-end">
                     <div>
                         <h1 className="text-3xl font-extrabold text-slate-900 mb-1">
@@ -331,6 +322,7 @@ const AdminDashboard = () => {
                                     )}
                                     {activeTab === 'teams' && (
                                         <>
+                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Team ID</th>
                                             <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Team Name</th>
                                             <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">AI Route</th>
                                             <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Agents</th>
@@ -366,29 +358,31 @@ const AdminDashboard = () => {
                                         )}
                                         {activeTab === 'teams' && (
                                             <>
+                                                <td className="px-6 py-4 text-sm font-mono font-bold text-slate-500">#{item.id}</td>
                                                 <td className="px-6 py-4 text-sm font-bold text-slate-900">{item.name}</td>
-                                                <td className="px-6 py-4"><span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">{item.handlesCategory}</span></td>
+                                                <td className="px-6 py-4">
+                                                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                                        {item.handlesCategory}
+                                                    </span>
+                                                </td>
                                                 <td className="px-6 py-4">
                                                     {item.agents && item.agents.length > 0 ? (
                                                         <div className="flex flex-wrap gap-2">
                                                             {item.agents.map(agent => (
-                                                                <span key={agent.id} className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200 group">
+                                                                <span key={agent.id} className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
                                                                     {agent.name}
-                                                                    
                                                                     <button 
                                                                         onClick={() => {
                                                                             setMoveData({ agentId: agent.id, oldTeamId: item.id, newTeamId: '', agentName: agent.name });
                                                                             setShowMoveModal(true);
                                                                         }}
-                                                                        className="ml-2 text-slate-400 hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                                        title="Move to another team"
+                                                                        className="ml-2 px-1.5 py-0.5 text-xs font-bold text-blue-600 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 transition-colors"
                                                                     >
-                                                                        <ArrowsRightLeftIcon className="w-3.5 h-3.5" />
+                                                                        Reassign
                                                                     </button>
-
                                                                     <button 
                                                                         onClick={() => handleRemoveAgentFromTeam(item.id, agent.id)}
-                                                                        className="ml-1 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                        className="ml-1 p-0.5 text-slate-400 hover:text-red-500 transition-colors"
                                                                         title="Remove from team"
                                                                     >
                                                                         <XMarkIcon className="w-3.5 h-3.5" />
@@ -460,8 +454,6 @@ const AdminDashboard = () => {
                 </div>
             </div>
 
-            {/* --- MODALS --- */}
-            
             {/* Create Staff Modal */}
             {showStaffModal && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50">
@@ -513,7 +505,13 @@ const AdminDashboard = () => {
                             </div>
                             <div>
                                 <label className={labelClass}>AI Route Category</label>
-                                <input name="handlesCategory" onChange={handleInputChange} placeholder="e.g. BILLING" required className={inputClass} />
+                                <select name="handlesCategory" onChange={handleInputChange} required className={inputClass}>
+                                    <option value="" disabled>Select a category...</option>
+                                    <option value="TECHNICAL">TECHNICAL</option>
+                                    <option value="BILLING">BILLING</option>
+                                    <option value="ACCOUNT">ACCOUNT</option>
+                                    <option value="GENERAL">GENERAL</option>
+                                </select>
                             </div>
                             <div className="pt-2">
                                 <button type="submit" className="w-full py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-colors shadow-sm">Create Team</button>

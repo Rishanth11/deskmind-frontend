@@ -14,7 +14,7 @@ import {
     NoSymbolIcon,
     CheckCircleIcon,
     XMarkIcon,
-    ArrowsRightLeftIcon // NEW: Added swap icon
+    ArrowsRightLeftIcon 
 } from '@heroicons/react/24/outline';
 
 const AdminDashboard = () => {
@@ -28,7 +28,7 @@ const AdminDashboard = () => {
     const [showStaffModal, setShowStaffModal] = useState(false);
     const [showTeamModal, setShowTeamModal] = useState(false);
     const [showAssignModal, setShowAssignModal] = useState(false);
-    const [showMoveModal, setShowMoveModal] = useState(false); // NEW: Move Modal state
+    const [showMoveModal, setShowMoveModal] = useState(false);
     const [selectedTeamId, setSelectedTeamId] = useState(null);
 
     // --- Agent Dropdown & Move States ---
@@ -200,7 +200,6 @@ const AdminDashboard = () => {
         } catch (err) { alert(err.message); }
     };
 
-    // NEW: Handle Moving Agent between teams
     const handleMoveAgent = async (e) => {
         e.preventDefault();
         try {
@@ -230,6 +229,10 @@ const AdminDashboard = () => {
 
     const assignedAgentIds = activeTab === 'teams' ? data.flatMap(team => team.agents?.map(a => a.id) || []) : [];
     const unassignedAgents = availableAgents.filter(agent => !assignedAgentIds.includes(agent.id));
+
+    // Common Input Class for polished UI
+    const inputClass = "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-600/20 focus:border-purple-600 outline-none transition-all text-sm font-medium text-slate-900 placeholder:text-slate-400";
+    const labelClass = "block text-sm font-bold text-slate-700 mb-1.5";
 
     return (
         <div className="min-h-screen bg-slate-50 flex font-sans text-slate-900">
@@ -369,10 +372,9 @@ const AdminDashboard = () => {
                                                     {item.agents && item.agents.length > 0 ? (
                                                         <div className="flex flex-wrap gap-2">
                                                             {item.agents.map(agent => (
-                                                                <span key={agent.id} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200 group">
+                                                                <span key={agent.id} className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200 group">
                                                                     {agent.name}
                                                                     
-                                                                    {/* NEW: Move Agent Button */}
                                                                     <button 
                                                                         onClick={() => {
                                                                             setMoveData({ agentId: agent.id, oldTeamId: item.id, newTeamId: '', agentName: agent.name });
@@ -460,98 +462,131 @@ const AdminDashboard = () => {
 
             {/* --- MODALS --- */}
             
+            {/* Create Staff Modal */}
             {showStaffModal && (
-                <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50">
-                    <div className="bg-white p-8 rounded-2xl shadow-xl w-96">
-                        <h2 className="text-xl font-bold mb-4">Add New Staff</h2>
-                        <form onSubmit={handleCreateStaff} className="space-y-4">
-                            <input name="name" onChange={handleInputChange} placeholder="Full Name" required className="w-full p-2 border rounded-lg bg-slate-50" />
-                            <input name="email" type="email" onChange={handleInputChange} placeholder="Email Address" required className="w-full p-2 border rounded-lg bg-slate-50" />
-                            <input name="password" type="password" onChange={handleInputChange} placeholder="Temporary Password" required className="w-full p-2 border rounded-lg bg-slate-50" />
-                            <select name="role" onChange={handleInputChange} className="w-full p-2 border rounded-lg font-medium bg-slate-50">
-                                <option value="AGENT">Support Agent (Team Member)</option>
-                                <option value="MANAGER">Global Supervisor (Manager)</option>
-                            </select>
-                            <div className="flex justify-end space-x-2 pt-4">
-                                <button type="button" onClick={() => setShowStaffModal(false)} className="px-4 py-2 text-slate-500 hover:text-slate-700 font-medium">Cancel</button>
-                                <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700">Create Staff</button>
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50">
+                    <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-xl font-extrabold text-slate-900">Add New Staff</h2>
+                            <button onClick={() => setShowStaffModal(false)} className="text-slate-400 hover:text-slate-600"><XMarkIcon className="w-6 h-6" /></button>
+                        </div>
+                        <form onSubmit={handleCreateStaff} className="space-y-5">
+                            <div>
+                                <label className={labelClass}>Full Name</label>
+                                <input name="name" onChange={handleInputChange} placeholder="John Doe" required className={inputClass} />
+                            </div>
+                            <div>
+                                <label className={labelClass}>Email Address</label>
+                                <input name="email" type="email" onChange={handleInputChange} placeholder="agent@deskmind.com" required className={inputClass} />
+                            </div>
+                            <div>
+                                <label className={labelClass}>Temporary Password</label>
+                                <input name="password" type="password" onChange={handleInputChange} placeholder="••••••••" required className={inputClass} />
+                            </div>
+                            <div>
+                                <label className={labelClass}>System Role</label>
+                                <select name="role" onChange={handleInputChange} className={inputClass}>
+                                    <option value="AGENT">Support Agent (Team Member)</option>
+                                    <option value="MANAGER">Global Supervisor (Manager)</option>
+                                </select>
+                            </div>
+                            <div className="pt-2">
+                                <button type="submit" className="w-full py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-colors shadow-sm">Create Staff Member</button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
 
+            {/* Create Team Modal */}
             {showTeamModal && (
-                <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50">
-                    <div className="bg-white p-8 rounded-2xl shadow-xl w-96">
-                        <h2 className="text-xl font-bold mb-4">Create Support Team</h2>
-                        <form onSubmit={handleCreateTeam} className="space-y-4">
-                            <input name="teamName" onChange={handleInputChange} placeholder="Team Name (e.g. Billing Squad)" required className="w-full p-2 border rounded-lg bg-slate-50" />
-                            <input name="handlesCategory" onChange={handleInputChange} placeholder="AI Route Category (e.g. BILLING)" required className="w-full p-2 border rounded-lg bg-slate-50" />
-                            <div className="flex justify-end space-x-2 pt-4">
-                                <button type="button" onClick={() => setShowTeamModal(false)} className="px-4 py-2 text-slate-500 hover:text-slate-700 font-medium">Cancel</button>
-                                <button type="submit" className="px-4 py-2 bg-purple-600 text-white rounded-lg font-bold hover:bg-purple-700">Create Team</button>
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50">
+                    <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-xl font-extrabold text-slate-900">Create Support Team</h2>
+                            <button onClick={() => setShowTeamModal(false)} className="text-slate-400 hover:text-slate-600"><XMarkIcon className="w-6 h-6" /></button>
+                        </div>
+                        <form onSubmit={handleCreateTeam} className="space-y-5">
+                            <div>
+                                <label className={labelClass}>Team Name</label>
+                                <input name="teamName" onChange={handleInputChange} placeholder="e.g. Billing Squad" required className={inputClass} />
+                            </div>
+                            <div>
+                                <label className={labelClass}>AI Route Category</label>
+                                <input name="handlesCategory" onChange={handleInputChange} placeholder="e.g. BILLING" required className={inputClass} />
+                            </div>
+                            <div className="pt-2">
+                                <button type="submit" className="w-full py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-colors shadow-sm">Create Team</button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
 
+            {/* Assign Agent Modal */}
             {showAssignModal && (
-                <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50">
-                    <div className="bg-white p-8 rounded-2xl shadow-xl w-96">
-                        <h2 className="text-xl font-bold mb-4">Assign Agent to Team</h2>
-                        <form onSubmit={handleAssignAgent} className="space-y-4">
-                            <select 
-                                name="agentId" 
-                                onChange={handleInputChange} 
-                                value={formData.agentId}
-                                required 
-                                className="w-full p-2 border rounded-lg bg-slate-50 text-slate-700"
-                            >
-                                <option value="" disabled>Select an available Agent...</option>
-                                {unassignedAgents.map(agent => (
-                                    <option key={agent.id} value={agent.id}>
-                                        {agent.name} ({agent.email})
-                                    </option>
-                                ))}
-                                {unassignedAgents.length === 0 && (
-                                    <option value="" disabled>No available agents to assign.</option>
-                                )}
-                            </select>
-
-                            <div className="flex justify-end space-x-2 pt-4">
-                                <button type="button" onClick={() => setShowAssignModal(false)} className="px-4 py-2 text-slate-500 hover:text-slate-700 font-medium">Cancel</button>
-                                <button type="submit" disabled={unassignedAgents.length === 0} className="px-4 py-2 bg-purple-600 text-white rounded-lg font-bold hover:bg-purple-700 disabled:opacity-50">Assign</button>
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50">
+                    <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-xl font-extrabold text-slate-900">Assign Agent</h2>
+                            <button onClick={() => setShowAssignModal(false)} className="text-slate-400 hover:text-slate-600"><XMarkIcon className="w-6 h-6" /></button>
+                        </div>
+                        <form onSubmit={handleAssignAgent} className="space-y-5">
+                            <div>
+                                <label className={labelClass}>Select Available Agent</label>
+                                <select 
+                                    name="agentId" 
+                                    onChange={handleInputChange} 
+                                    value={formData.agentId}
+                                    required 
+                                    className={inputClass}
+                                >
+                                    <option value="" disabled>Choose an agent...</option>
+                                    {unassignedAgents.map(agent => (
+                                        <option key={agent.id} value={agent.id}>
+                                            {agent.name} ({agent.email})
+                                        </option>
+                                    ))}
+                                    {unassignedAgents.length === 0 && (
+                                        <option value="" disabled>No available agents found.</option>
+                                    )}
+                                </select>
+                            </div>
+                            <div className="pt-2">
+                                <button type="submit" disabled={unassignedAgents.length === 0} className="w-full py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 disabled:opacity-50 transition-colors shadow-sm">Assign to Team</button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
 
-            {/* NEW: Move Agent Modal */}
+            {/* Move Agent Modal */}
             {showMoveModal && (
-                <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50">
-                    <div className="bg-white p-8 rounded-2xl shadow-xl w-96">
-                        <h2 className="text-xl font-bold mb-4">Move {moveData.agentName}</h2>
-                        <form onSubmit={handleMoveAgent} className="space-y-4">
-                            <select 
-                                required
-                                value={moveData.newTeamId}
-                                onChange={(e) => setMoveData({...moveData, newTeamId: e.target.value})}
-                                className="w-full p-2 border rounded-lg bg-slate-50 text-slate-700"
-                            >
-                                <option value="" disabled>Select destination team...</option>
-                                {/* Only show teams that are NOT the agent's current team */}
-                                {data.filter(t => t.id !== moveData.oldTeamId).map(team => (
-                                    <option key={team.id} value={team.id}>
-                                        {team.name} ({team.handlesCategory})
-                                    </option>
-                                ))}
-                            </select>
-                            <div className="flex justify-end space-x-2 pt-4">
-                                <button type="button" onClick={() => setShowMoveModal(false)} className="px-4 py-2 text-slate-500 hover:text-slate-700 font-medium">Cancel</button>
-                                <button type="submit" disabled={!moveData.newTeamId} className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 disabled:opacity-50">Move Agent</button>
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50">
+                    <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-xl font-extrabold text-slate-900">Reassign {moveData.agentName}</h2>
+                            <button onClick={() => setShowMoveModal(false)} className="text-slate-400 hover:text-slate-600"><XMarkIcon className="w-6 h-6" /></button>
+                        </div>
+                        <form onSubmit={handleMoveAgent} className="space-y-5">
+                            <div>
+                                <label className={labelClass}>Destination Team</label>
+                                <select 
+                                    required
+                                    value={moveData.newTeamId}
+                                    onChange={(e) => setMoveData({...moveData, newTeamId: e.target.value})}
+                                    className={inputClass}
+                                >
+                                    <option value="" disabled>Select destination team...</option>
+                                    {data.filter(t => t.id !== moveData.oldTeamId).map(team => (
+                                        <option key={team.id} value={team.id}>
+                                            {team.name} ({team.handlesCategory})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="pt-2">
+                                <button type="submit" disabled={!moveData.newTeamId} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-sm">Move Agent</button>
                             </div>
                         </form>
                     </div>

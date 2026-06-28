@@ -2,33 +2,28 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import authService from '../services/authService';
 import { 
-  EnvelopeIcon, 
-  LockClosedIcon, 
-  KeyIcon,
-  TicketIcon,
-  ArrowLeftIcon,
-  ChatBubbleLeftRightIcon,
-  CheckBadgeIcon,
-  ClockIcon
+    EnvelopeIcon, 
+    LockClosedIcon, 
+    KeyIcon,
+    TicketIcon,
+    ArrowLeftIcon,
+    ChatBubbleLeftRightIcon,
+    CheckBadgeIcon,
+    ClockIcon
 } from '@heroicons/react/24/outline';
 
 const ForgotPassword = () => {
-    // State to track which step of the process we are on
     const [step, setStep] = useState(1); 
-    
-    // Form inputs
     const [email, setEmail] = useState('');
     const [otp, setOtp] = useState('');
     const [newPassword, setNewPassword] = useState('');
     
-    // Feedback messages
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
     const navigate = useNavigate();
 
-    // Triggered when they request the OTP
     const handleSendOtp = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -38,7 +33,7 @@ const ForgotPassword = () => {
         try {
             await authService.forgotPassword(email);
             setMessage("OTP sent! Check your email inbox.");
-            setStep(2); // Move to the next screen
+            setStep(2); 
         } catch (err) {
             setError(err.message || "Failed to send OTP. Please try again.");
         } finally {
@@ -46,7 +41,6 @@ const ForgotPassword = () => {
         }
     };
 
-    // Triggered when they submit the new password
     const handleResetPassword = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -133,35 +127,37 @@ const ForgotPassword = () => {
                 {/* Footer */}
                 <div className="relative z-10">
                     <p className="text-gray-500 text-sm">
-                        © 2026 DeskMind. All rights reserved.
+                        © {new Date().getFullYear()} DeskMind. All rights reserved.
                     </p>
                 </div>
             </div>
 
             {/* Right Side - Forgot Password Form */}
-            <div className="w-full lg:w-1/2 flex items-center justify-center p-8 lg:p-12">
+            <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-8 lg:p-12">
                 <div className="w-full max-w-md">
                     {/* Mobile Brand (visible only on small screens) */}
                     <div className="lg:hidden text-center mb-8">
                         <div className="flex items-center justify-center space-x-2 mb-2">
-                            <TicketIcon className="w-10 h-10 text-blue-600" />
-                            <h1 className="text-2xl font-extrabold text-gray-900">DeskMind</h1>
+                            <div className="bg-blue-600 p-2 rounded-xl shadow-lg shadow-blue-600/20">
+                                <TicketIcon className="w-6 h-6 text-white" />
+                            </div>
+                            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">DeskMind</h1>
                         </div>
-                        <p className="text-sm font-medium text-blue-600">Smart Support, Faster Resolution</p>
+                        <p className="text-sm sm:text-base font-medium text-blue-600">Smart Support, Faster Resolution</p>
                     </div>
 
                     <div className="text-center mb-8">
-                        <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <div className="w-14 h-14 sm:w-16 sm:h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
                             {step === 1 ? (
-                                <EnvelopeIcon className="w-8 h-8" />
+                                <EnvelopeIcon className="w-7 h-7 sm:w-8 sm:h-8" />
                             ) : (
-                                <KeyIcon className="w-8 h-8" />
+                                <KeyIcon className="w-7 h-7 sm:w-8 sm:h-8" />
                             )}
                         </div>
-                        <h2 className="text-2xl font-extrabold text-gray-900 mb-2">
+                        <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-2">
                             {step === 1 ? 'Reset Password' : 'Create New Password'}
                         </h2>
-                        <p className="text-gray-500 font-medium text-sm">
+                        <p className="text-gray-500 font-medium text-sm sm:text-base">
                             {step === 1 
                                 ? 'Enter your email to receive a 6-digit OTP' 
                                 : `Enter the OTP sent to ${email}`
@@ -171,23 +167,23 @@ const ForgotPassword = () => {
 
                     {/* Feedback Banners */}
                     {error && (
-                        <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm font-medium rounded-xl border border-red-100 flex items-center justify-center">
-                            <span className="w-1.5 h-1.5 bg-red-600 rounded-full mr-2"></span>
+                        <div className="mb-6 p-3 sm:p-4 bg-red-50 text-red-600 text-sm font-medium rounded-xl border border-red-100 flex items-center justify-center text-center">
+                            <span className="w-1.5 h-1.5 bg-red-600 rounded-full mr-2 flex-shrink-0"></span>
                             {error}
                         </div>
                     )}
                     {message && (
-                        <div className="mb-4 p-3 bg-emerald-50 text-emerald-700 text-sm font-medium rounded-xl border border-emerald-100 flex items-center justify-center">
-                            <span className="w-1.5 h-1.5 bg-emerald-600 rounded-full mr-2"></span>
+                        <div className="mb-6 p-3 sm:p-4 bg-emerald-50 text-emerald-700 text-sm font-medium rounded-xl border border-emerald-100 flex items-center justify-center text-center">
+                            <span className="w-1.5 h-1.5 bg-emerald-600 rounded-full mr-2 flex-shrink-0"></span>
                             {message}
                         </div>
                     )}
 
                     {/* STEP 1: Request OTP */}
                     {step === 1 && (
-                        <form onSubmit={handleSendOtp} className="space-y-5">
+                        <form onSubmit={handleSendOtp} className="space-y-4 sm:space-y-5">
                             <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">
+                                <label className="block text-sm font-bold text-gray-700 mb-1.5 sm:mb-2">
                                     Email Address
                                 </label>
                                 <div className="relative">
@@ -200,14 +196,14 @@ const ForgotPassword = () => {
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)} 
                                         required 
-                                        className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 focus:bg-white outline-none transition-all text-sm font-medium placeholder:text-gray-400"
+                                        className="w-full pl-11 pr-4 py-3 sm:py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 focus:bg-white outline-none transition-all text-base sm:text-sm font-medium placeholder:text-gray-400"
                                     />
                                 </div>
                             </div>
                             <button 
                                 type="submit" 
                                 disabled={loading}
-                                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-600/30 transition-all hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center"
+                                className="w-full py-3.5 sm:py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-600/30 transition-all hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center mt-2"
                             >
                                 {loading ? (
                                     <>
@@ -226,9 +222,9 @@ const ForgotPassword = () => {
 
                     {/* STEP 2: Verify OTP & New Password */}
                     {step === 2 && (
-                        <form onSubmit={handleResetPassword} className="space-y-5">
+                        <form onSubmit={handleResetPassword} className="space-y-4 sm:space-y-5">
                             <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">
+                                <label className="block text-sm font-bold text-gray-700 mb-1.5 sm:mb-2">
                                     6-Digit OTP
                                 </label>
                                 <div className="relative">
@@ -242,12 +238,12 @@ const ForgotPassword = () => {
                                         onChange={(e) => setOtp(e.target.value)} 
                                         required 
                                         maxLength="6"
-                                        className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 focus:bg-white outline-none transition-all text-sm font-medium placeholder:text-gray-400 tracking-[0.3em]"
+                                        className="w-full pl-11 pr-4 py-3 sm:py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 focus:bg-white outline-none transition-all text-base sm:text-sm font-medium placeholder:text-gray-400 tracking-[0.3em]"
                                     />
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">
+                                <label className="block text-sm font-bold text-gray-700 mb-1.5 sm:mb-2">
                                     New Password
                                 </label>
                                 <div className="relative">
@@ -260,14 +256,14 @@ const ForgotPassword = () => {
                                         value={newPassword}
                                         onChange={(e) => setNewPassword(e.target.value)} 
                                         required 
-                                        className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 focus:bg-white outline-none transition-all text-sm font-medium placeholder:text-gray-400"
+                                        className="w-full pl-11 pr-4 py-3 sm:py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 focus:bg-white outline-none transition-all text-base sm:text-sm font-medium placeholder:text-gray-400"
                                     />
                                 </div>
                             </div>
                             <button 
                                 type="submit" 
                                 disabled={loading}
-                                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-600/30 transition-all hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center"
+                                className="w-full py-3.5 sm:py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-600/30 transition-all hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center mt-2"
                             >
                                 {loading ? (
                                     <>
@@ -285,7 +281,7 @@ const ForgotPassword = () => {
                     )}
 
                     {/* Navigation Footer */}
-                    <div className="mt-8 pt-6 border-t border-gray-100">
+                    <div className="mt-8 pt-6 border-t border-gray-100 flex justify-center">
                         <Link 
                             to="/login" 
                             className="inline-flex items-center text-sm font-bold text-gray-500 hover:text-gray-800 transition-colors group"
@@ -296,7 +292,7 @@ const ForgotPassword = () => {
                     </div>
 
                     {/* Feature Tags */}
-                    <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+                    <div className="mt-6 sm:mt-8 flex flex-wrap items-center justify-center gap-2">
                         <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-50 text-gray-600 border border-gray-200">
                             24/7 Support
                         </span>

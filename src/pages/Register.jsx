@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { 
-  UserIcon, 
-  EnvelopeIcon, 
-  LockClosedIcon, 
-  ArrowRightOnRectangleIcon,
-  TicketIcon,
-  ChatBubbleLeftRightIcon,
-  CheckBadgeIcon,
-  ClockIcon
+    UserIcon, 
+    EnvelopeIcon, 
+    LockClosedIcon, 
+    ArrowRightOnRectangleIcon,
+    TicketIcon,
+    ChatBubbleLeftRightIcon,
+    CheckBadgeIcon,
+    ClockIcon
 } from '@heroicons/react/24/outline';
 
 const Register = () => {
@@ -17,7 +17,6 @@ const Register = () => {
     const [error, setError] = useState('');
     const navigate = useNavigate();
 
-    // FIXED: Centralized API URL for production
     const API_BASE = 'https://deskmind-3kq3.onrender.com';
 
     const handleRegister = async (e) => {
@@ -26,7 +25,6 @@ const Register = () => {
         setError('');
         
         try {
-            // FIXED: Using API_BASE instead of localhost
             const response = await fetch(`${API_BASE}/api/auth/register`, {
                 method: 'POST',
                 headers: {
@@ -121,38 +119,40 @@ const Register = () => {
                 {/* Footer */}
                 <div className="relative z-10">
                     <p className="text-gray-500 text-sm">
-                        © 2026 DeskMind. All rights reserved.
+                        © {new Date().getFullYear()} DeskMind. All rights reserved.
                     </p>
                 </div>
             </div>
 
             {/* Right Side - Register Form */}
-            <div className="w-full lg:w-1/2 flex items-center justify-center p-8 lg:p-12">
+            <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-8 lg:p-12">
                 <div className="w-full max-w-md">
                     {/* Mobile Brand (visible only on small screens) */}
                     <div className="lg:hidden text-center mb-8">
                         <div className="flex items-center justify-center space-x-2 mb-2">
-                            <TicketIcon className="w-10 h-10 text-blue-600" />
-                            <h1 className="text-2xl font-extrabold text-gray-900">DeskMind</h1>
+                            <div className="bg-blue-600 p-2 rounded-xl shadow-lg shadow-blue-600/20">
+                                <TicketIcon className="w-6 h-6 text-white" />
+                            </div>
+                            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">DeskMind</h1>
                         </div>
-                        <p className="text-sm font-medium text-blue-600">Smart Support, Faster Resolution</p>
+                        <p className="text-sm sm:text-base font-medium text-blue-600">Smart Support, Faster Resolution</p>
                     </div>
 
                     <div className="text-center mb-8">
-                        <h2 className="text-2xl font-extrabold text-gray-900 mb-2">Create Account</h2>
-                        <p className="text-gray-500 font-medium text-sm">Join DeskMind to manage your support tickets</p>
+                        <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-2">Create Account</h2>
+                        <p className="text-gray-500 font-medium text-sm sm:text-base">Join DeskMind to manage your support tickets</p>
                     </div>
 
                     {error && (
-                        <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm font-medium rounded-xl border border-red-100 flex items-center justify-center">
-                            <span className="w-1.5 h-1.5 bg-red-600 rounded-full mr-2"></span>
+                        <div className="mb-6 p-3 sm:p-4 bg-red-50 text-red-600 text-sm font-medium rounded-xl border border-red-100 flex items-center justify-center text-center">
+                            <span className="w-1.5 h-1.5 bg-red-600 rounded-full mr-2 flex-shrink-0"></span>
                             {error}
                         </div>
                     )}
 
-                    <form onSubmit={handleRegister} className="space-y-5">
+                    <form onSubmit={handleRegister} className="space-y-4 sm:space-y-5">
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">
+                            <label className="block text-sm font-bold text-gray-700 mb-1.5 sm:mb-2">
                                 Full Name
                             </label>
                             <div className="relative">
@@ -163,14 +163,14 @@ const Register = () => {
                                     type="text" 
                                     required 
                                     onChange={(e) => setFormData({...formData, name: e.target.value})}
-                                    className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 focus:bg-white outline-none transition-all text-sm font-medium placeholder:text-gray-400"
+                                    className="w-full pl-11 pr-4 py-3 sm:py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 focus:bg-white outline-none transition-all text-base sm:text-sm font-medium placeholder:text-gray-400"
                                     placeholder="John Doe"
                                 />
                             </div>
                         </div>
 
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">
+                            <label className="block text-sm font-bold text-gray-700 mb-1.5 sm:mb-2">
                                 Email Address
                             </label>
                             <div className="relative">
@@ -181,14 +181,14 @@ const Register = () => {
                                     type="email" 
                                     required 
                                     onChange={(e) => setFormData({...formData, email: e.target.value})}
-                                    className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 focus:bg-white outline-none transition-all text-sm font-medium placeholder:text-gray-400"
+                                    className="w-full pl-11 pr-4 py-3 sm:py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 focus:bg-white outline-none transition-all text-base sm:text-sm font-medium placeholder:text-gray-400"
                                     placeholder="you@company.com"
                                 />
                             </div>
                         </div>
 
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">
+                            <label className="block text-sm font-bold text-gray-700 mb-1.5 sm:mb-2">
                                 Password
                             </label>
                             <div className="relative">
@@ -199,7 +199,7 @@ const Register = () => {
                                     type="password" 
                                     required 
                                     onChange={(e) => setFormData({...formData, password: e.target.value})}
-                                    className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 focus:bg-white outline-none transition-all text-sm font-medium placeholder:text-gray-400"
+                                    className="w-full pl-11 pr-4 py-3 sm:py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 focus:bg-white outline-none transition-all text-base sm:text-sm font-medium placeholder:text-gray-400"
                                     placeholder="Create a strong password"
                                 />
                             </div>
@@ -208,7 +208,7 @@ const Register = () => {
                         <button 
                             type="submit" 
                             disabled={loading} 
-                            className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-600/30 transition-all hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center"
+                            className="w-full py-3.5 sm:py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-600/30 transition-all hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center mt-2"
                         >
                             {loading ? (
                                 <>
@@ -228,7 +228,7 @@ const Register = () => {
                     </form>
 
                     <div className="mt-8 pt-6 border-t border-gray-100">
-                        <p className="text-center text-sm text-gray-500 font-medium">
+                        <p className="text-center text-sm sm:text-base text-gray-500 font-medium">
                             Already have an account?{' '}
                             <Link 
                                 to="/login" 
@@ -240,7 +240,7 @@ const Register = () => {
                     </div>
 
                     {/* Feature Tags */}
-                    <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+                    <div className="mt-6 sm:mt-8 flex flex-wrap items-center justify-center gap-2">
                         <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-50 text-gray-600 border border-gray-200">
                             24/7 Support
                         </span>
